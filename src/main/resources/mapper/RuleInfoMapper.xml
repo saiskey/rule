@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.rule.mapper.RuleInfoMapper">
+  <resultMap id="BaseResultMap" type="com.example.rule.entity.pojo.RuleInfo">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="rule_name" jdbcType="VARCHAR" property="ruleName" />
+    <result column="template_name" jdbcType="VARCHAR" property="templateName" />
+    <result column="template_method" jdbcType="VARCHAR" property="templateMethod" />
+    <result column="field_type" jdbcType="VARCHAR" property="fieldType" />
+    <result column="param_type" jdbcType="VARCHAR" property="paramType" />
+    <result column="rule_content" jdbcType="VARCHAR" property="ruleContent" />
+    <result column="status" jdbcType="INTEGER" property="status" />
+    <result column="gmt_create" jdbcType="TIMESTAMP" property="gmtCreate" />
+    <result column="gmt_update" jdbcType="TIMESTAMP" property="gmtUpdate" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    id, rule_name, template_name, template_method, field_type, param_type, rule_content, 
+    status, gmt_create, gmt_update
+  </sql>
+  <select id="selectByPrimaryKey" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from rule_info
+    where id = #{id,jdbcType=BIGINT}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+    delete from rule_info
+    where id = #{id,jdbcType=BIGINT}
+  </delete>
+  <insert id="insert" parameterType="com.example.rule.entity.pojo.RuleInfo">
+    insert into rule_info (id, rule_name, template_name, 
+      template_method, field_type, param_type, 
+      rule_content, status, gmt_create, 
+      gmt_update)
+    values (#{id,jdbcType=BIGINT}, #{ruleName,jdbcType=VARCHAR}, #{templateName,jdbcType=VARCHAR}, 
+      #{templateMethod,jdbcType=VARCHAR}, #{fieldType,jdbcType=VARCHAR}, #{paramType,jdbcType=VARCHAR}, 
+      #{ruleContent,jdbcType=VARCHAR}, #{status,jdbcType=INTEGER}, #{gmtCreate,jdbcType=TIMESTAMP}, 
+      #{gmtUpdate,jdbcType=TIMESTAMP})
+  </insert>
+  <insert id="insertSelective" parameterType="com.example.rule.entity.pojo.RuleInfo">
+    insert into rule_info
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        id,
+      </if>
+      <if test="ruleName != null">
+        rule_name,
+      </if>
+      <if test="templateName != null">
+        template_name,
+      </if>
+      <if test="templateMethod != null">
+        template_method,
+      </if>
+      <if test="fieldType != null">
+        field_type,
+      </if>
+      <if test="paramType != null">
+        param_type,
+      </if>
+      <if test="ruleContent != null">
+        rule_content,
+      </if>
+      <if test="status != null">
+        status,
+      </if>
+      <if test="gmtCreate != null">
+        gmt_create,
+      </if>
+      <if test="gmtUpdate != null">
+        gmt_update,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        #{id,jdbcType=BIGINT},
+      </if>
+      <if test="ruleName != null">
+        #{ruleName,jdbcType=VARCHAR},
+      </if>
+      <if test="templateName != null">
+        #{templateName,jdbcType=VARCHAR},
+      </if>
+      <if test="templateMethod != null">
+        #{templateMethod,jdbcType=VARCHAR},
+      </if>
+      <if test="fieldType != null">
+        #{fieldType,jdbcType=VARCHAR},
+      </if>
+      <if test="paramType != null">
+        #{paramType,jdbcType=VARCHAR},
+      </if>
+      <if test="ruleContent != null">
+        #{ruleContent,jdbcType=VARCHAR},
+      </if>
+      <if test="status != null">
+        #{status,jdbcType=INTEGER},
+      </if>
+      <if test="gmtCreate != null">
+        #{gmtCreate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="gmtUpdate != null">
+        #{gmtUpdate,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+  <update id="updateByPrimaryKeySelective" parameterType="com.example.rule.entity.pojo.RuleInfo">
+    update rule_info
+    <set>
+      <if test="ruleName != null">
+        rule_name = #{ruleName,jdbcType=VARCHAR},
+      </if>
+      <if test="templateName != null">
+        template_name = #{templateName,jdbcType=VARCHAR},
+      </if>
+      <if test="templateMethod != null">
+        template_method = #{templateMethod,jdbcType=VARCHAR},
+      </if>
+      <if test="fieldType != null">
+        field_type = #{fieldType,jdbcType=VARCHAR},
+      </if>
+      <if test="paramType != null">
+        param_type = #{paramType,jdbcType=VARCHAR},
+      </if>
+      <if test="ruleContent != null">
+        rule_content = #{ruleContent,jdbcType=VARCHAR},
+      </if>
+      <if test="status != null">
+        status = #{status,jdbcType=INTEGER},
+      </if>
+      <if test="gmtCreate != null">
+        gmt_create = #{gmtCreate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="gmtUpdate != null">
+        gmt_update = #{gmtUpdate,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.example.rule.entity.pojo.RuleInfo">
+    update rule_info
+    set rule_name = #{ruleName,jdbcType=VARCHAR},
+      template_name = #{templateName,jdbcType=VARCHAR},
+      template_method = #{templateMethod,jdbcType=VARCHAR},
+      field_type = #{fieldType,jdbcType=VARCHAR},
+      param_type = #{paramType,jdbcType=VARCHAR},
+      rule_content = #{ruleContent,jdbcType=VARCHAR},
+      status = #{status,jdbcType=INTEGER},
+      gmt_create = #{gmtCreate,jdbcType=TIMESTAMP},
+      gmt_update = #{gmtUpdate,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+
+  <select id="findCountByName" resultType="int">
+    select count(1) from rule_info where rule_name=#{ruleName} and status = 1 ;
+  </select>
+
+    <select id="findOneByName" resultMap="BaseResultMap">
+    select * from rule_info where rule_name=#{ruleName} and status = 1 ;
+  </select>
+</mapper>
