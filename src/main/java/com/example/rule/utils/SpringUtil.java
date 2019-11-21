@@ -2,7 +2,6 @@ package com.example.rule.utils;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -35,10 +34,15 @@ public class SpringUtil implements ApplicationContextAware {
         Object bean = null;
         try {
             bean = appCtx.getBean(name);
-        } catch (NoSuchBeanDefinitionException exception) {
-            log.info("spring 容器获取bean失败！");
+        } catch (Exception exception) {
+            log.info("spring 容器获取{}失败！", name);
         }
         return bean;
+    }
+
+    public static boolean exist(String name) {
+        Object bean = SpringUtil.getBean(name);
+        return bean != null;
     }
 
 

@@ -48,8 +48,7 @@ public class ContextFinishListener implements ApplicationListener<ContextRefresh
         for (File cc : classList) {
             if (cc.isFile() && cc.getName().endsWith(".class")) {
                 String replace = cc.getAbsolutePath().replace(classPath, "").replace("\\", ".").replace(".class", "");
-                log.info(replace);
-                LoadJarUtil.addToSpring(replace);
+                LoadJarUtil.initToSpring(replace);
             } else {
                 loadToSpring(cc);
             }

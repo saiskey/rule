@@ -39,6 +39,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
@@ -145,7 +146,6 @@ public class RuleController {
         conditionInfo.setParamType(JSON.toJSONString(info.getParamsType()));
         conditionInfo.setConditionContent(info.getConditionContent());
         conditionInfoMapper.insertSelective(conditionInfo);
-//        updateClassImpl(ruleInfo, info);
         updateRule(ruleInfo, info);
         return "200";
     }
@@ -158,19 +158,14 @@ public class RuleController {
                 return "规则不存在";
             }
             Class<?> aClass1 = Class.forName(ruleInfo.getTemplateName() + ruleInfo.getRuleName());
-            ClassLoader classLoader = aClass1.getClassLoader();
-            log.info("classLoader:{}",classLoader);
-            Class<?> springClass = Class.forName("com.example.rule.utils.SpringUtil");
-            ClassLoader classLoaderSpring = springClass.getClassLoader();
-            log.info("classLoaderSpring:{}",classLoaderSpring);
             Object o = aClass1.newInstance();
             Map<String, String> params = ruleDto.getParams();
             Object rule = null;
             if (CollectionUtils.isEmpty(params)) {
-                rule = aClass1.getDeclaredMethod(ruleDto.getTemplateMethodName()).invoke(o);
+                aClass1.getDeclaredMethod(ruleDto.getRuleName()).invoke(o);
             } else {
                 for (Method ctMethod : aClass1.getMethods()) {
-                    if (ctMethod.getName().equals(ruleDto.getTemplateMethodName())) {
+                    if (ctMethod.getName().equals(ruleDto.getRuleName())) {
                         List<Object> paramsList = new ArrayList<>();
                         params.forEach((a, b) -> {
                             try {
@@ -179,6 +174,7 @@ public class RuleController {
                                 paramsList.add(object);
                             } catch (Exception e) {
                                 e.printStackTrace();
+                                throw new RuntimeException(e);
                             }
                         });
                         ctMethod.invoke(o, paramsList.toArray());
@@ -257,15 +253,15 @@ public class RuleController {
         CtClass ctClass = ClassPool.getDefault().get(name);
         CtField f = new CtField(ctClass, shortClassName, target);
         f.setModifiers(java.lang.reflect.Modifier.PRIVATE);
+
         FieldInfo fieldInfo = f.getFieldInfo();
         // 属性附上注解
-        ClassFile classFile = ctClass.getClassFile();
+        ClassFile classFile = target.getClassFile();
         ConstPool constPool = classFile.getConstPool();
         AnnotationsAttribute fieldAttr = new AnnotationsAttribute(constPool, AnnotationsAttribute.visibleTag);
-        Annotation autowired = new Annotation("org.springframework.beans.factory.annotation.Autowired",constPool);
+        Annotation autowired = new Annotation("com.example.rule.annotation.SpringGet",constPool);
         fieldAttr.addAnnotation(autowired);
         fieldInfo.addAttribute(fieldAttr);
-
         log.info("添加的属性名：{}", shortClassName);
         target.addField(f);
         Object bean = SpringUtil.getBean(name);

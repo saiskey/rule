@@ -1,5 +1,6 @@
 package com.example.rule.utils;
 
+import com.example.rule.annotation.SpringGet;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -40,21 +41,50 @@ public class LoadJarUtil {
         }
     }
 
-    public static void addToSpring(String name) {
-        log.info("开始添加到spring");
-        Object bean = null;
+    public static void initToSpring(String name) {
+        if (SpringUtil.exist(name)) {
+            return;
+        }
+        Class<?> clazz = null;
         try {
-            Class<?> springClass = Class.forName("com.example.rule.utils.SpringUtil");
-            ClassLoader classLoaderSpring = springClass.getClassLoader();
-            log.info("classLoaderSpring:{}",classLoaderSpring);
-            bean = SpringUtil.getBean(name);
-            if (bean != null) {
-                log.info("{}在spring中已经存在！", name);
-                return;
+            clazz = Class.forName(name);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+        Field[] fields = clazz.getDeclaredFields();
+        Object o = null;
+        for (Field field : fields) {
+            boolean primitive = field.getType().isPrimitive();
+            if (primitive) {
+                continue;
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            log.info("获取bean失败！{}", name);
+            if (field.isAnnotationPresent(SpringGet.class)) {
+                try {
+                    Class<?> type = field.getType();
+                    Field[] declaredFields = type.getDeclaredFields();
+                    o = type.newInstance();
+                    field.setAccessible(true);
+                    for (Field f : declaredFields) {
+                        if (f.isAnnotationPresent(Autowired.class)) {
+                            Object bean1 = SpringUtil.getBean(f.getName());
+                            f.setAccessible(true);
+                            f.set(o, bean1);
+                            f.setAccessible(false);
+                        }
+                    }
+                    log.info("手动添加spring bean:{}", type.getName());
+                    SpringUtil.getBeanFactory().registerSingleton(type.getName(), o);
+                } catch (Exception e) {
+                    log.info("手动添加spring bean失败！", e);
+                }
+                field.setAccessible(false);
+            }
+        }
+    }
+
+    public static void addToSpring(String name) {
+        if (SpringUtil.exist(name)) {
+            return;
         }
         Class<?> clazz = null;
         try {
@@ -71,14 +101,16 @@ public class LoadJarUtil {
             }
             if (field.isAnnotationPresent(Autowired.class)) {
                 try {
+                    Class<?> type = field.getType();
                     o = clazz.newInstance();
-                    log.info(field.getName());
-                    bean = SpringUtil.getBean(field.getName());
+                    Object bean1 = SpringUtil.getBean(field.getName());
                     field.setAccessible(true);
-                    field.set(o, bean);
+                    field.set(o, bean1);
+                    log.info("手动添加spring bean:{}", name);
                     SpringUtil.getBeanFactory().registerSingleton(name, o);
                 } catch (Exception e) {
-                    log.info("手动添加Autowired失败！", e);
+                    log.info("手动添加spring bean失败！", e);
+                    throw new RuntimeException(e);
                 }
                 field.setAccessible(false);
             }
