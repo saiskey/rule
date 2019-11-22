@@ -66,9 +66,9 @@ public class LoadJarUtil {
                     field.setAccessible(true);
                     for (Field f : declaredFields) {
                         if (f.isAnnotationPresent(Autowired.class)) {
-                            Object bean1 = SpringUtil.getBean(f.getName());
+                            Object fieldBean = SpringUtil.getBean(f.getName());
                             f.setAccessible(true);
-                            f.set(o, bean1);
+                            f.set(o, fieldBean);
                             f.setAccessible(false);
                         }
                     }
@@ -101,15 +101,14 @@ public class LoadJarUtil {
             }
             if (field.isAnnotationPresent(Autowired.class)) {
                 try {
-                    Class<?> type = field.getType();
                     o = clazz.newInstance();
-                    Object bean1 = SpringUtil.getBean(field.getName());
+                    Object fileBean = SpringUtil.getBean(field.getName());
                     field.setAccessible(true);
-                    field.set(o, bean1);
+                    field.set(o, fileBean);
                     log.info("手动添加spring bean:{}", name);
                     SpringUtil.getBeanFactory().registerSingleton(name, o);
                 } catch (Exception e) {
-                    log.info("手动添加spring bean失败！", e);
+                    log.info("手动添加spring bean失败！");
                     throw new RuntimeException(e);
                 }
                 field.setAccessible(false);
