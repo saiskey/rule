@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 /**
  * @Description:
  * @Author: wangzhuo
@@ -50,7 +52,7 @@ public class RuleController {
     }
 
     @PostMapping("/run")
-    public ResponseVo run(@RequestBody RuleDto request) {
+    public ResponseVo run(@RequestBody List<RuleDto> request) {
         boolean flag = ruleService.run(request);
         return ResponseVo.success(flag);
     }

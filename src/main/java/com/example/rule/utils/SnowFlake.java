@@ -64,7 +64,7 @@ public class SnowFlake {
 //        try{
 //            BlockingQueue<Runnable> rQueue = new LinkedBlockingQueue<>();
 //            List<Callable<Integer>> cList = new ArrayList<>();
-//            Runnable runnable = () -> {
+//            Runnable callable = () -> {
 //                getSnowFlakeId();
 //                System.out.println(integer.addAndGet(1));
 //            };
@@ -74,14 +74,14 @@ public class SnowFlake {
 //            };
 //
 //            for (int i = 0; i < 100000; i++) {
-//                rQueue.add(runnable);
+//                rQueue.add(callable);
 //                cList.add(callable);
 //            }
 //            threadPool1 = Executors.newCachedThreadPool();
 //            List<Future<Integer>> futures =threadPool1.invokeAll(cList);
 //            threadPool2 = new ThreadPoolExecutor(10, 500, 10, TimeUnit.SECONDS, rQueue);
 //            System.out.println(((ThreadPoolExecutor) threadPool2).getTaskCount());
-////            threadPool2.submit(runnable);//这行注释掉会有奇妙的效果
+////            threadPool2.submit(callable);//这行注释掉会有奇妙的效果
 //        }catch (Exception e){
 //            System.out.println("报错时共生成了： "+integer);
 //        }finally {

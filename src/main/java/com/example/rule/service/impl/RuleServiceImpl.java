@@ -1,6 +1,7 @@
 package com.example.rule.service.impl;
 
 import com.alibaba.fastjson.JSON;
+import com.example.rule.callable.RuleRun;
 import com.example.rule.entity.dto.ConditionDto;
 import com.example.rule.entity.dto.RuleDto;
 import com.example.rule.entity.pojo.ConditionInfo;
@@ -19,6 +20,7 @@ import javassist.CtClass;
 import javassist.CtConstructor;
 import javassist.CtField;
 import javassist.CtMethod;
+import javassist.CtNewMethod;
 import javassist.NotFoundException;
 import javassist.bytecode.AnnotationsAttribute;
 import javassist.bytecode.ClassFile;
@@ -36,10 +38,11 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /**
  * @Description:
@@ -101,6 +104,17 @@ public class RuleServiceImpl implements RuleService {
                 zz = pool.get(ruleInfo.getTemplateName() + info.getRuleName());
             } catch (NotFoundException e) {
                 zz = pool.get(ruleInfo.getTemplateName());
+                if (zz.isInterface()) {
+                    CtClass cc = pool.makeClass(ruleInfo.getTemplateName() + info.getRuleName());
+                    CtMethod declaredMethod = null;
+                    StringBuilder sb = new StringBuilder();
+                    declaredMethod = zz.getDeclaredMethod(ruleInfo.getTemplateMethod());
+                    sb.append("public ").append(declaredMethod.getReturnType().getName()).append(" ").append(ruleInfo.getTemplateMethod()).append("()").append("{return null;}");
+                    CtMethod m = CtNewMethod.make(
+                            sb.toString(), cc);
+                    cc.addMethod(m);
+                    zz = cc;
+                }
             }
         } catch (Exception e) {
             log.info("解析jar包失败!");
@@ -152,41 +166,27 @@ public class RuleServiceImpl implements RuleService {
     }
 
     @Override
-    public boolean run(RuleDto ruleDto) {
-        try {
-            RuleInfo ruleInfo = ruleInfoMapper.findOneByName(ruleDto.getRuleName());
+    public boolean run(List<RuleDto> list) {
+        ExecutorService exec = Executors.newCachedThreadPool();//工头
+        ArrayList<Future<Boolean>> results = new ArrayList<>();
+        list.forEach(a -> {
+            RuleInfo ruleInfo = ruleInfoMapper.findOneByName(a.getRuleName());
             if (ruleInfo == null) {
                 throw new RuntimeException("规则不存在");
             }
-            Class<?> aClass1 = Class.forName(ruleInfo.getTemplateName() + ruleInfo.getRuleName());
-            Object o = aClass1.newInstance();
-            Map<String, String> params = ruleDto.getParams();
-            Object rule = null;
-            if (CollectionUtils.isEmpty(params)) {
-                aClass1.getDeclaredMethod(ruleDto.getRuleName()).invoke(o);
-            } else {
-                for (Method ctMethod : aClass1.getMethods()) {
-                    if (ctMethod.getName().equals(ruleDto.getRuleName())) {
-                        List<Object> paramsList = new ArrayList<>();
-                        params.forEach((a, b) -> {
-                            try {
-                                Class<?> aClass3 = Class.forName(a);
-                                Object object = JSON.parseObject(b, aClass3);
-                                paramsList.add(object);
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                                throw new RuntimeException(e);
-                            }
-                        });
-                        ctMethod.invoke(o, paramsList.toArray());
-                    }
-                }
+            a.setTemplateName(ruleInfo.getTemplateName());
+            results.add(exec.submit(new RuleRun(a)));
+        });
+        log.info("size1: {}", results.size());
+        boolean flag = true;
+        for (Future<Boolean> future : results) {
+            try {
+                flag = future.get();
+            } catch (Exception e) {
+                flag = false;
             }
-        } catch (Exception e) {
-            log.info("规则运行失败！",e);
-            throw new RuntimeException("规则运行失败！");
         }
-        return false;
+        return flag;
     }
 
 
@@ -258,8 +258,15 @@ public class RuleServiceImpl implements RuleService {
             SpringUtil.getBeanFactory().registerSingleton(name, aClass);
         }
         CtConstructor[] constructors = target.getConstructors();
-        constructors[0].insertAfter(shortClassName + " = com.example.rule.utils.SpringUtil.getBean(\"" + name +
-                "\");");
+        if (constructors.length == 0) {
+            CtConstructor ctConstructor = new CtConstructor(null, target);
+            ctConstructor.setBody(shortClassName + " = com.example.rule.utils.SpringUtil.getBean(\"" + name +
+                    "\");");
+            target.addConstructor(ctConstructor);
+        } else {
+            constructors[0].insertAfter(shortClassName + " = com.example.rule.utils.SpringUtil.getBean(\"" + name +
+                    "\");");
+        }
     }
 
     private String getShortClassName(String name) {

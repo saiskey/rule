@@ -4,6 +4,8 @@ import com.example.rule.entity.dto.ConditionDto;
 import com.example.rule.entity.dto.RuleDto;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 /**
  * @Description:
  * @Author: wangzhuo
@@ -15,5 +17,5 @@ public interface RuleService {
 
     void addCondition(ConditionDto info, MultipartFile file);
 
-    boolean run(RuleDto request);
+    boolean run(List<RuleDto> request);
 }
