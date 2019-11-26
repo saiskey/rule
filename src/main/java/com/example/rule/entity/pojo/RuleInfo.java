@@ -15,7 +15,13 @@ public class RuleInfo {
 
     private String paramType;
 
+    private String returnType;
+
+    private String hitContent;
+
     private String ruleContent;
+
+    private String conditionIds;
 
     private Integer status;
 
@@ -71,12 +77,36 @@ public class RuleInfo {
         this.paramType = paramType == null ? null : paramType.trim();
     }
 
+    public String getReturnType() {
+        return returnType;
+    }
+
+    public void setReturnType(String returnType) {
+        this.returnType = returnType == null ? null : returnType.trim();
+    }
+
+    public String getHitContent() {
+        return hitContent;
+    }
+
+    public void setHitContent(String hitContent) {
+        this.hitContent = hitContent == null ? null : hitContent.trim();
+    }
+
     public String getRuleContent() {
         return ruleContent;
     }
 
     public void setRuleContent(String ruleContent) {
         this.ruleContent = ruleContent == null ? null : ruleContent.trim();
+    }
+
+    public String getConditionIds() {
+        return conditionIds;
+    }
+
+    public void setConditionIds(String conditionIds) {
+        this.conditionIds = conditionIds == null ? null : conditionIds.trim();
     }
 
     public Integer getStatus() {

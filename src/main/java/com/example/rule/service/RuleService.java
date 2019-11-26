@@ -1,6 +1,5 @@
 package com.example.rule.service;
 
-import com.example.rule.entity.dto.ConditionDto;
 import com.example.rule.entity.dto.RuleDto;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -15,7 +14,7 @@ public interface RuleService {
 
     void addRule(RuleDto request);
 
-    void addCondition(ConditionDto info, MultipartFile file);
+    void addCondition(RuleDto info, MultipartFile file);
 
-    boolean run(List<RuleDto> request);
+    Object run(List<RuleDto> request);
 }

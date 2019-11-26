@@ -1,10 +1,9 @@
 package com.example.rule.controller;
 
 import com.alibaba.fastjson.JSON;
-import com.example.rule.entity.dto.ConditionDto;
 import com.example.rule.entity.dto.RuleDto;
+import com.example.rule.entity.dto.RuleTest;
 import com.example.rule.entity.vo.ResponseVo;
-import com.example.rule.mapper.RuleInfoMapper;
 import com.example.rule.service.RuleService;
 import com.example.rule.utils.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -30,8 +29,6 @@ import java.util.List;
 public class RuleController {
 
     @Autowired
-    private RuleInfoMapper ruleInfoMapper;
-    @Autowired
     private RedisUtil redisUtil;
     @Autowired
     private RuleService ruleService;
@@ -46,19 +43,19 @@ public class RuleController {
     @PostMapping(value = "/addCondition")
     @Transactional
     public ResponseVo addCondition(@RequestPart("json") String request, @RequestPart("file") MultipartFile file) {
-        ConditionDto info = JSON.parseObject(request, ConditionDto.class);
+        RuleDto info = JSON.parseObject(request, RuleDto.class);
         ruleService.addCondition(info, file);
         return ResponseVo.success();
     }
 
     @PostMapping("/run")
     public ResponseVo run(@RequestBody List<RuleDto> request) {
-        boolean flag = ruleService.run(request);
-        return ResponseVo.success(flag);
+        Object run = ruleService.run(request);
+        return ResponseVo.success(run);
     }
 
     @PostMapping("/login")
-    public void login(@RequestBody RuleDto ruleDto) {
+    public void login(@RequestBody RuleTest ruleTest) {
         Object login = redisUtil.get("loginCount");
         if (login == null) {
             redisUtil.set("loginCount", "1");
@@ -67,7 +64,8 @@ public class RuleController {
             count++;
             redisUtil.set("loginCount", count.toString());
         }
-        redisUtil.set("loginName", ruleDto.getRuleName());
+        redisUtil.set(ruleTest.getKey(), JSON.toJSON(ruleTest));
+
     }
 
 }

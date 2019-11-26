@@ -2,6 +2,7 @@ package com.example.rule.callable;
 
 import com.alibaba.fastjson.JSON;
 import com.example.rule.entity.dto.RuleDto;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.CollectionUtils;
 
 import java.lang.reflect.Method;
@@ -15,7 +16,8 @@ import java.util.concurrent.Callable;
  * @Author: wangzhuo
  * @Date: 2019/11/22 11:43
  **/
-public class RuleRun implements Callable<Boolean> {
+@Slf4j
+public class RuleRun implements Callable<Object> {
 
     private RuleDto ruleDto;
 
@@ -24,17 +26,17 @@ public class RuleRun implements Callable<Boolean> {
     }
 
     @Override
-    public Boolean call() throws Exception {
+    public Object call() {
         try {
-            Class<?> aClass1 = Class.forName(ruleDto.getTemplateName() + ruleDto.getRuleName());
+            Class<?> aClass1 = Class.forName(ruleDto.getRuleName());
             Object o = aClass1.newInstance();
             Map<String, String> params = ruleDto.getParams();
             Object rule = null;
             if (CollectionUtils.isEmpty(params)) {
-                rule = aClass1.getDeclaredMethod(ruleDto.getRuleName()).invoke(o);
+                rule = aClass1.getDeclaredMethod(ruleDto.getTemplateMethodName()).invoke(o);
             } else {
                 for (Method ctMethod : aClass1.getMethods()) {
-                    if (ctMethod.getName().equals(ruleDto.getRuleName())) {
+                    if (ctMethod.getName().equals(ruleDto.getTemplateMethodName())) {
                         List<Object> paramsList = new ArrayList<>();
                         params.forEach((a, b) -> {
                             try {
@@ -50,8 +52,9 @@ public class RuleRun implements Callable<Boolean> {
                     }
                 }
             }
-            return true;
+            return rule;
         } catch (Exception e) {
+            log.info("规则执行错误！", e);
             return false;
         }
     }

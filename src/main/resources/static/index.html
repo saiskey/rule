@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<style>
+    body {
+        background: #353f42;
+    }
+
+    * {
+        padding: 0;
+        margin: 0;
+    }
+
+    .main {
+        margin: 0;
+        padding-left: 25px;
+        padding-right: 25px;
+        padding-top: 15px;
+        width: 350px;
+        height: 1000px;
+        background: #FFFFFF;
+        /*以下css用于让登录表单垂直居中在界面,可删除*/
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        margin-top: -175px;
+        margin-left: -175px;
+    }
+
+    .title {
+        width: 100%;
+        height: 40px;
+        line-height: 40px;
+    }
+
+    .title span {
+        font-size: 18px;
+        color: #353f42;
+    }
+
+    .title-msg {
+        width: 100%;
+        height: 64px;
+        line-height: 64px;
+    }
+
+    .title:hover {
+        cursor: default;
+    }
+
+    .title-msg:hover {
+        cursor: default;
+    }
+
+    .title-msg span {
+        font-size: 12px;
+        color: #707472;
+    }
+
+    .input-content {
+        width: 100%;
+        height: 200px;
+    }
+
+    .input-content input {
+        width: 330px;
+        height: 40px;
+        border: 1px solid #dad9d6;
+        background: #ffffff;
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .enter-btn {
+        width: 350px;
+        height: 40px;
+        color: #fff;
+        background: #0bc5de;
+        /*line-height: 60px;*/
+        text-align: center;
+        border: 0px;
+    }
+
+    .enter-btn:hover {
+        cursor: pointer;
+        background: #1db5c9;
+    }
+
+</style>
+<body>
+<div class="main">
+    <div class="title">
+        <span>规则平台</span>
+    </div>
+
+    <div class="title-msg">
+        <span>添加规则</span>
+    </div>
+
+    <form class="login-form" method="post" id="ruleForm" novalidate>
+        <!--输入框-->
+        <div class="input-content">
+            <!--autoFocus-->
+            <div>
+                <input type="text" autocomplete="off"
+                       placeholder="规则名" name="ruleName" required/>
+            </div>
+
+            <div style="margin-top: 16px">
+                <input type="text"
+                       autocomplete="off" placeholder="模板名" name="templateName" required maxlength="32"/>
+            </div>
+
+            <div style="margin-top: 16px">
+                <input type="text"
+                       autocomplete="off" placeholder="模板方法" name="templateMethodName" required maxlength="32"/>
+            </div>
+        </div>
+
+        <div style="text-align: center">
+            <button type="submit" class="enter-btn" onclick="addRule()">添加规则</button>
+        </div>
+    </form>
+
+    <div class="title-msg">
+        <span>添加条件</span>
+    </div>
+
+    <form class="login-form" method="post" novalidate>
+        <!--输入框-->
+        <div class="input-content">
+            <!--autoFocus-->
+            <div>
+                <input type="file" autocomplete="off"
+                       placeholder="jar包" name="file" required/>
+            </div>
+
+            <div style="margin-top: 16px">
+                <input type="text"
+                       autocomplete="off" placeholder="条件名" name="conditionName" required maxlength="32"/>
+            </div>
+            <div style="margin-top: 16px">
+                <input type="text"
+                       autocomplete="off" placeholder="条件内容" name="conditionContent" required maxlength="32"/>
+            </div>
+            <div style="margin-top: 16px">
+                <input type="text"
+                       autocomplete="off" placeholder="参数类型" name="paramsType" required maxlength="32"/>
+            </div>
+            <div style="margin-top: 16px">
+                <input type="text"
+                       autocomplete="off" placeholder="字段类型" name="fieldType" required maxlength="32"/>
+            </div>
+            <div style="margin-top: 16px">
+                <input type="text"
+                       autocomplete="off" placeholder="规则id" name="ruleId" required maxlength="32"/>
+            </div>
+        </div>
+
+        <div >
+            <button type="submit" class="enter-btn" onclick="addCondition()">添加条件</button>
+        </div>
+    </form>
+
+</div>
+</body>
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+<script type="text/javascript">
+    function addRule() {
+        var data = JSON.stringify($('#ruleForm').serialize());
+        alert(data);
+        $.ajax({
+            //几个参数需要注意一下
+            type: "POST",//方法类型
+            dataType: "json",//预期服务器返回的数据类型 如果是对象返回的是json 如果是字符串这里一定要定义text 之前我就是定义json 结果字符串的返回一直到额error中去
+            url: "http://localhost:8005/rule/addRule",//url
+            data: data,//这个是form表单中的id   jQuery的serialize()方法通过序列化表单值
+            success: function (result) {
+                alert("成功")
+                console.log(result);//打印服务端返回的数据(调试用)
+                if (result.status == 10000) {
+                    alert("SUCCESS");
+                }
+                ;
+            }
+        });
+    }
+</script>
+</html>

@@ -7,13 +7,17 @@ public class ConditionInfo {
 
     private String conditionName;
 
-    private String conditionContent;
+    private String templateName;
+
+    private String templateMethod;
+
+    private String preContent;
+
+    private String judgeContent;
 
     private String paramType;
 
     private String fieldType;
-
-    private Long ruleId;
 
     private Integer status;
 
@@ -37,12 +41,36 @@ public class ConditionInfo {
         this.conditionName = conditionName == null ? null : conditionName.trim();
     }
 
-    public String getConditionContent() {
-        return conditionContent;
+    public String getTemplateName() {
+        return templateName;
     }
 
-    public void setConditionContent(String conditionContent) {
-        this.conditionContent = conditionContent == null ? null : conditionContent.trim();
+    public void setTemplateName(String templateName) {
+        this.templateName = templateName == null ? null : templateName.trim();
+    }
+
+    public String getTemplateMethod() {
+        return templateMethod;
+    }
+
+    public void setTemplateMethod(String templateMethod) {
+        this.templateMethod = templateMethod == null ? null : templateMethod.trim();
+    }
+
+    public String getPreContent() {
+        return preContent;
+    }
+
+    public void setPreContent(String preContent) {
+        this.preContent = preContent == null ? null : preContent.trim();
+    }
+
+    public String getJudgeContent() {
+        return judgeContent;
+    }
+
+    public void setJudgeContent(String judgeContent) {
+        this.judgeContent = judgeContent == null ? null : judgeContent.trim();
     }
 
     public String getParamType() {
@@ -59,14 +87,6 @@ public class ConditionInfo {
 
     public void setFieldType(String fieldType) {
         this.fieldType = fieldType == null ? null : fieldType.trim();
-    }
-
-    public Long getRuleId() {
-        return ruleId;
-    }
-
-    public void setRuleId(Long ruleId) {
-        this.ruleId = ruleId;
     }
 
     public Integer getStatus() {

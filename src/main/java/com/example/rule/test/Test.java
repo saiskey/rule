@@ -1,13 +1,15 @@
 package com.example.rule.test;
 
-import com.example.rule.entity.dto.RuleDto;
-import javassist.CannotCompileException;
+import com.google.common.collect.Lists;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.CtMethod;
 import javassist.CtNewMethod;
-import javassist.bytecode.MethodInfo;
-import org.springframework.util.StringUtils;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @Description:
@@ -18,56 +20,46 @@ public class Test {
 
 
     public static void main(String[] args) throws Exception {
-        String templateName = "com.example.rule.template.TestRule";
-        int lastIdx = templateName.lastIndexOf(".");
-        String substring = templateName.substring(0, lastIdx);
-        substring = substring + ".impl" + templateName.substring(lastIdx);
-        System.out.println(substring);
         ClassPool pool = ClassPool.getDefault();
-        pool.insertClassPath("D:\\\\testCode\\\\jar\\\\hckj-user.jar");
-        CtClass cc = pool.get("com.example.rule.template.TestRule");
-        CtClass ctClass = null;
-        CtMethod[] methods = cc.getMethods();
-        for (CtMethod ctMethod : methods) {
-            try {
-                if (ctMethod.getName().equals("rule")) {
-                    ctMethod.insertAfter("{ Long a = com.hckj.saas.user.config.AuthConst.ROLE_PERM_TIMEOUT;" +
-                            "System.out.println(a);}");
-                }
-            } catch (CannotCompileException e) {
-                e.printStackTrace();
-//                for(int j = 0;j<2;j++) {
-//                    int i = ctMethod.getParameterTypes().length;
-//                    ctClass = pool.get("com.example.rule.entity.dto.RuleDto");
-//                    ctMethod.addParameter(ctClass);
-//                    final int sort = i + 1;
-//                    System.out.println(sort);
-//                }
-//                ctMethod.insertAfter("{ String a = $1.getName();System.out.println(a);}");
-//                String string = ctMethod.getReturnType().getName();
-//                CtMethod make = CtNewMethod.make("public " + string + " rule(" + "com.example.rule.entity.dto" +
-//                                ".RuleDto" + " param1){ " +
-//                                "return rule();}",
-//                        cc);
-//                cc.addMethod(make);
-//                CtMethod[] newMs = cc.getMethods();
-//                for (CtMethod method:newMs) {
-//                    try {
-//                        if (ctMethod.getName().equals("rule") && ctMethod.get)
-//                            ctMethod.insertAfter("{ String a = ruleDto.getName();System.out.println(a);}");
-//                    }catch (CannotCompileException ex){
-//                        ex.printStackTrace();
-//                        continue;
-//                    }
-//                }
-//                System.out.println(string);
-            }
+        CtClass zz = pool.get("com.example.rule.template.RuleTemplate");
+        CtClass cc = null;
+        cc = pool.makeClass("TestRule2");
+        CtMethod declaredMethod = null;
+        StringBuilder sb = new StringBuilder();
+        declaredMethod = zz.getDeclaredMethod("rule");
+        String returnType = "String";
+        double i = 0;
+        Map<String,String> baseMap = new HashMap<>();
+        baseMap.put("int","int i = 0;return i;");
+        baseMap.put("byte","byte i = 0;return i;");
+        baseMap.put("double","double i = 0;return i;");
+        baseMap.put("long","long i = 0;return i;");
+        baseMap.put("float","float i = 0;return i;");
+        baseMap.put("boolean","boolean i = false;return i;");
+        baseMap.put("char","char i = 0;return i;");
+        baseMap.put("short","short i = 0;return i;");
+        baseMap.put("String","String i = \"\";return i;");
+        baseMap.put("string","String i = \"\";return i;");
+        String initCode = "";
+        if (baseMap.containsKey(returnType)){
+            initCode = baseMap.get(returnType);
         }
-        cc.writeFile();
-//        cc = pool.get("com.example.rule.template.TestRule");
-        Class<?> aClass = cc.toClass();
-        Object o = aClass.newInstance();
-//        Object rule = o.getClass().getMethod("rule", RuleDto.class).invoke(o,new RuleDto());
-//        System.out.println(rule);
+        if (returnType == null) {
+            returnType = declaredMethod.getReturnType().getName();
+        }
+        sb.append("public ").append(returnType).append(" ").append("rule").append(
+                "(){").append(initCode).append("}");
+        CtMethod m = CtNewMethod.make(
+                sb.toString(), cc);
+        cc.addMethod(m);
+        CtMethod rule = cc.getDeclaredMethod("rule");
+        CtClass xx = pool.get("com.example.rule.entity.dto.RuleTest");
+        rule.addParameter(xx);
+        rule.insertAfter("{System.out.println(\"aaa\");System.out.println(\"bbb\");int hitCount = 0;if($1.getCount() >" +
+                " 50){hitCount++;}if($1.getCount() > 50){hitCount++;}if(hitCount >=1){return \"false\";}}");
+        cc.setName("TestRule2");
+        cc.writeFile("D:\\testCode\\code\\");
     }
+
+
 }

@@ -8,14 +8,8 @@ package com.example.rule.template;
 public class TestRule {
     private int a;
 
-    public boolean rule() {
-        boolean flag = true;
+    public void rule() {
 
-        return flag;
     }
 
-    public int test(int b) {
-        int i = 5;
-        return i + b;
-    }
 }

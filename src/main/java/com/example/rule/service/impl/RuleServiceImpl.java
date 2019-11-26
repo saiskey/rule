@@ -2,13 +2,11 @@ package com.example.rule.service.impl;
 
 import com.alibaba.fastjson.JSON;
 import com.example.rule.callable.RuleRun;
-import com.example.rule.entity.dto.ConditionDto;
 import com.example.rule.entity.dto.RuleDto;
+import com.example.rule.entity.exception.ResponseException;
 import com.example.rule.entity.pojo.ConditionInfo;
-import com.example.rule.entity.pojo.RuleClassInfo;
 import com.example.rule.entity.pojo.RuleInfo;
 import com.example.rule.mapper.ConditionInfoMapper;
-import com.example.rule.mapper.RuleClassInfoMapper;
 import com.example.rule.mapper.RuleInfoMapper;
 import com.example.rule.service.RuleService;
 import com.example.rule.utils.LoadJarUtil;
@@ -24,8 +22,10 @@ import javassist.CtNewMethod;
 import javassist.NotFoundException;
 import javassist.bytecode.AnnotationsAttribute;
 import javassist.bytecode.ClassFile;
+import javassist.bytecode.CodeAttribute;
 import javassist.bytecode.ConstPool;
 import javassist.bytecode.FieldInfo;
+import javassist.bytecode.LineNumberAttribute;
 import javassist.bytecode.annotation.Annotation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,10 +39,13 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 /**
  * @Description:
@@ -56,8 +59,6 @@ public class RuleServiceImpl implements RuleService {
     @Autowired
     private RuleInfoMapper ruleInfoMapper;
     @Autowired
-    private RuleClassInfoMapper ruleClassInfoMapper;
-    @Autowired
     private ConditionInfoMapper conditionInfoMapper;
     @Value("${rule.class.path}")
     private String classPath;
@@ -68,27 +69,25 @@ public class RuleServiceImpl implements RuleService {
         if (byName > 0) {
             throw new RuntimeException("规则已存在");
         }
-        RuleInfo ruleInfo = new RuleInfo();
-        ruleInfo.setId(SnowFlake.getSnowFlakeId());
-        ruleInfo.setRuleName(request.getRuleName());
-        ruleInfo.setTemplateName(request.getTemplateName());
-        ruleInfo.setTemplateMethod(request.getTemplateMethodName());
-        ruleInfoMapper.insertSelective(ruleInfo);
+        List<Long> conditionIds = request.getConditionIds();
+        if (CollectionUtils.isEmpty(conditionIds)) {
+            throw new RuntimeException("条件不能为空！");
+        }
+        List<ConditionInfo> list = conditionInfoMapper.findByIds(conditionIds);
+        Map<String, List<ConditionInfo>> collect =
+                list.stream().collect(Collectors.groupingBy(a -> a.getTemplateName() + "." + a.getTemplateMethod()));
+        if (collect.size() > 1) {
+            throw new RuntimeException("条件模板不一致！");
+        }
+        packRule(list, request);
     }
 
     @Override
-    public void addCondition(ConditionDto info, MultipartFile file) {
+    public void addCondition(RuleDto info, MultipartFile file) {
         int count = conditionInfoMapper.findByName(info.getConditionName());
         if (count > 0) {
             throw new RuntimeException("条件已存在");
         }
-        RuleInfo ruleInfo = ruleInfoMapper.selectByPrimaryKey(info.getRuleId());
-        if (ruleInfo == null) {
-            throw new RuntimeException("规则不存在");
-        }
-        info.setTemplateName(ruleInfo.getTemplateName());
-        info.setTemplateMethodName(ruleInfo.getTemplateMethod());
-        info.setRuleName(ruleInfo.getRuleName());
         CtClass zz = null;
         try {
             if (file != null) {
@@ -99,29 +98,73 @@ public class RuleServiceImpl implements RuleService {
                 outputStream.close();
                 LoadJarUtil.loadJarLocal(outFile);
             }
-            ClassPool pool = ClassPool.getDefault();
-            try {
-                zz = pool.get(ruleInfo.getTemplateName() + info.getRuleName());
-            } catch (NotFoundException e) {
-                zz = pool.get(ruleInfo.getTemplateName());
-                if (zz.isInterface()) {
-                    CtClass cc = pool.makeClass(ruleInfo.getTemplateName() + info.getRuleName());
-                    CtMethod declaredMethod = null;
-                    StringBuilder sb = new StringBuilder();
-                    declaredMethod = zz.getDeclaredMethod(ruleInfo.getTemplateMethod());
-                    sb.append("public ").append(declaredMethod.getReturnType().getName()).append(" ").append(ruleInfo.getTemplateMethod()).append("()").append("{return null;}");
-                    CtMethod m = CtNewMethod.make(
-                            sb.toString(), cc);
-                    cc.addMethod(m);
-                    zz = cc;
-                }
-            }
+            zz = getCtClass(info.getTemplateName(), info.getTemplateMethodName(), info.getConditionName(), null);
         } catch (Exception e) {
-            log.info("解析jar包失败!");
-            throw new RuntimeException(e);
+            log.info("解析jar包失败!", e);
+            throw new ResponseException("解析jar包失败!");
         }
         CtClass cc = zz;
         List<String> fieldType = info.getFieldType();
+        if (StringUtils.isEmpty(info.getPreContent())) {
+            info.setRuleContent("if(" + info.getJudgeContent() + ");");
+        } else {
+            info.setRuleContent(info.getPreContent() + "if(" + info.getJudgeContent() + "){}");
+        }
+        this.addField(cc, fieldType);
+        this.addContent(cc, info);
+        cc.setName(info.getConditionName());
+        try {
+            cc.writeFile(classPath);
+        } catch (CannotCompileException e) {
+            log.info("规则文件编译失败！");
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            log.info("规则文件写出失败！");
+            throw new RuntimeException(e);
+        }
+        ConditionInfo conditionInfo = new ConditionInfo();
+        conditionInfo.setId(SnowFlake.getSnowFlakeId());
+        conditionInfo.setConditionName(info.getConditionName());
+        conditionInfo.setTemplateName(info.getTemplateName());
+        conditionInfo.setTemplateMethod(info.getTemplateMethodName());
+        if (!StringUtils.isEmpty(info.getFieldType())) {
+            conditionInfo.setFieldType(JSON.toJSONString(info.getFieldType()));
+        }
+        if (!StringUtils.isEmpty(info.getParamsType())) {
+            conditionInfo.setParamType(JSON.toJSONString(info.getParamsType()));
+        }
+        conditionInfo.setPreContent(info.getPreContent());
+        conditionInfo.setJudgeContent(info.getJudgeContent());
+        conditionInfoMapper.insertSelective(conditionInfo);
+    }
+
+    @Override
+    public Object run(List<RuleDto> list) {
+        ExecutorService exec = Executors.newCachedThreadPool();//工头
+        ArrayList<Future<Object>> results = new ArrayList<>();
+        list.forEach(a -> {
+            RuleInfo ruleInfo = ruleInfoMapper.findOneByName(a.getRuleName());
+            if (ruleInfo == null) {
+                throw new RuntimeException("规则不存在");
+            }
+            a.setTemplateName(ruleInfo.getTemplateName());
+            results.add(exec.submit(new RuleRun(a)));
+        });
+        log.info("size1: {}", results.size());
+        List<Object> result = new ArrayList<>();
+        for (Future<Object> future : results) {
+            try {
+                Object o = future.get();
+                result.add(o);
+            } catch (Exception e) {
+                log.info("规则执行错误！", e);
+                throw new ResponseException("规则执行错误!");
+            }
+        }
+        return result;
+    }
+
+    private void addField(CtClass cc, List<String> fieldType) {
         if (!CollectionUtils.isEmpty(fieldType)) {
             fieldType.forEach(a -> {
                 try {
@@ -142,69 +185,19 @@ public class RuleServiceImpl implements RuleService {
                 }
             });
         }
-        this.addCondition(cc, info);
-        cc.setName(info.getTemplateName() + info.getRuleName());
-        try {
-            cc.writeFile(classPath);
-        } catch (CannotCompileException e) {
-            log.info("规则文件编译失败！");
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            log.info("规则文件写出失败！");
-            throw new RuntimeException(e);
-        }
-        cc.defrost();
-        ConditionInfo conditionInfo = new ConditionInfo();
-        conditionInfo.setId(SnowFlake.getSnowFlakeId());
-        conditionInfo.setConditionName(info.getConditionName());
-        conditionInfo.setRuleId(info.getRuleId());
-        conditionInfo.setFieldType(JSON.toJSONString(info.getFieldType()));
-        conditionInfo.setParamType(JSON.toJSONString(info.getParamsType()));
-        conditionInfo.setConditionContent(info.getConditionContent());
-        conditionInfoMapper.insertSelective(conditionInfo);
-        updateRule(ruleInfo, info);
     }
 
-    @Override
-    public boolean run(List<RuleDto> list) {
-        ExecutorService exec = Executors.newCachedThreadPool();//工头
-        ArrayList<Future<Boolean>> results = new ArrayList<>();
-        list.forEach(a -> {
-            RuleInfo ruleInfo = ruleInfoMapper.findOneByName(a.getRuleName());
-            if (ruleInfo == null) {
-                throw new RuntimeException("规则不存在");
-            }
-            a.setTemplateName(ruleInfo.getTemplateName());
-            results.add(exec.submit(new RuleRun(a)));
-        });
-        log.info("size1: {}", results.size());
-        boolean flag = true;
-        for (Future<Boolean> future : results) {
-            try {
-                flag = future.get();
-            } catch (Exception e) {
-                flag = false;
-            }
-        }
-        return flag;
-    }
-
-
-    private void addCondition(CtClass target, ConditionDto info) {
+    private String addContent(CtClass target, RuleDto info) {
+        String ruleBody = info.getRuleContent();
         CtMethod[] methods = target.getMethods();
         for (CtMethod ctMethod : methods) {
-            if (ctMethod.getName().equals(info.getTemplateMethodName())) {
-                List<String> paramsType = info.getParamsType();
-                if (CollectionUtils.isEmpty(paramsType)) {
-                    try {
-                        ctMethod.insertAfter(info.getConditionContent());
-                    } catch (CannotCompileException e) {
-                        log.info("代码编译失败！");
-                        throw new RuntimeException(e);
-                    }
-                } else {
-                    paramsType.forEach(a -> {
-                        try {
+            try {
+                if (ctMethod.getName().equals(info.getTemplateMethodName())) {
+                    List<String> paramsType = info.getParamsType();
+                    if (CollectionUtils.isEmpty(paramsType)) {
+                        ctMethod.insertAfter(ruleBody);
+                    } else {
+                        for (String a : paramsType) {
                             CtClass[] parameterTypes = ctMethod.getParameterTypes();
                             boolean flag = false;
                             int order = 0;
@@ -222,18 +215,29 @@ public class RuleServiceImpl implements RuleService {
                             }
                             String paramSort = a.substring(a.lastIndexOf(".") + 1);
                             paramSort = paramSort.substring(0, 1).toLowerCase() + paramSort.substring(1);
-                            info.setConditionContent(info.getConditionContent().replace(paramSort, "$" + order));
-                            log.info("ruleBody:{}", info.getConditionContent());
-                            ctMethod.insertAfter(info.getConditionContent());
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
+                            String content = ruleBody.replace(paramSort, "$" + order);
+                            log.info("content:{}", content);
+                            ruleBody = content;
                         }
-                    });
+//                        CodeAttribute codeAttribute = ctMethod.getMethodInfo().getCodeAttribute();
+//                        LineNumberAttribute lineNumberAttribute =
+//                                (LineNumberAttribute) codeAttribute.getAttribute(LineNumberAttribute.tag);
+//                        int i = lineNumberAttribute.tableLength();
+//                        log.info("tableLength:{}", i);
+                        String code = ctMethod.getName()+"{";
 
+//                        int lineNumber = ctMethod.getMethodInfo().getLineNumber(0);
+//                        log.info("lineNumber:{}", lineNumber);
+//                        ctMethod.insertAt(6, "{" + ruleBody + "}");
+                        ctMethod.insertAfter( "{" + ruleBody + "}");
+                    }
                 }
-                ctMethod.setName(info.getRuleName());
+            } catch (Exception e) {
+                log.info("代码编译失败！", e);
+                throw new ResponseException("规则编译失败!");
             }
         }
+        return ruleBody;
     }
 
     private void addFieldAndInit(String name, CtClass target) throws Exception {
@@ -280,95 +284,143 @@ public class RuleServiceImpl implements RuleService {
         return code;
     }
 
-    private void updateRule(RuleInfo ruleInfo, ConditionDto info) {
-        updateFieldType(ruleInfo, info);
-        updateParamType(ruleInfo, info);
-        String ruleContent = ruleInfo.getRuleContent();
-        if (StringUtils.isEmpty(ruleContent)) {
-            ruleInfo.setRuleContent(info.getConditionContent());
+    private void packRule(List<ConditionInfo> list, RuleDto request) {
+        CtClass ctClass = getCtClass(request.getTemplateName(), request.getTemplateMethodName(),
+                request.getRuleName(), request.getReturnType());
+        List<String> fieldList = list.stream().map(ConditionInfo::getFieldType).collect(Collectors.toList());
+        fieldList = getList(fieldList);
+        this.addField(ctClass, fieldList);
+        List<String> paramList = list.stream().map(ConditionInfo::getParamType).collect(Collectors.toList());
+        paramList = getList(paramList);
+        List<String> preContentList = list.stream().map(ConditionInfo::getPreContent).collect(Collectors.toList());
+        StringBuilder sb = new StringBuilder();
+        preContentList.forEach(a -> sb.append(StringUtils.isEmpty(a) ? "" : a));
+        List<String> judgeContentList = list.stream().map(ConditionInfo::getJudgeContent).collect(Collectors.toList());
+        Map<String, String> judgeMap = list.stream().collect(Collectors.toMap(ConditionInfo::getConditionName,
+                ConditionInfo::getJudgeContent));
+        List<List<String>> hitRule = request.getHitRule();
+        if (CollectionUtils.isEmpty(hitRule)) {
+            int hitCount = request.getHitCount();
+            sb.append("int hitCount = 0;");
+            judgeContentList.forEach(a -> sb.append("if(" + a + "){hitCount++;}"));
+            sb.append("if(hitCount >=" + hitCount + "){" + request.getHitContent() + "}");
         } else {
-            ruleContent = "{" + getCode(ruleContent) + getCode(info.getConditionContent()) + "}";
-            ruleInfo.setRuleContent(ruleContent);
-        }
-        ruleInfoMapper.updateByPrimaryKeySelective(ruleInfo);
-    }
-
-    private void updateParamType(RuleInfo ruleInfo, ConditionDto info) {
-        if (CollectionUtils.isEmpty(info.getFieldType())) {
-            return;
-        }
-        String fieldType = ruleInfo.getFieldType();
-        if (StringUtils.isEmpty(fieldType)) {
-            ruleInfo.setFieldType(JSON.toJSONString(info.getFieldType()));
-        } else {
-            List<String> fieldTypeList = JSON.parseArray(fieldType, String.class);
-            info.getFieldType().forEach(a -> {
-                if (!fieldTypeList.contains(a)) {
-                    fieldTypeList.add(a);
-                }
+            StringBuilder sb2 = new StringBuilder();
+            hitRule.forEach(a -> {
+                StringBuilder stringBuilder = new StringBuilder();
+                a.forEach(b -> {
+                    String s = judgeMap.get(b);
+                    stringBuilder.append(s).append("&&");
+                });
+                String s = stringBuilder.toString();
+                String substring = s.substring(0, s.length() - 2);
+                sb2.append("(" + substring + ") ||");
             });
-            ruleInfo.setFieldType(JSON.toJSONString(info.getFieldType()));
+            String s = sb2.toString();
+            String substring = s.substring(0, s.length() - 2);
+            sb.append("if(" + substring + "){" + request.getHitContent() + "}");
         }
+        RuleDto info = new RuleDto();
+        info.setRuleContent(sb.toString());
+        info.setTemplateMethodName(request.getTemplateMethodName());
+        info.setParamsType(paramList);
+        info.setReturnType(request.getReturnType());
+        String content = this.addContent(ctClass, info);
+        ctClass.setName(request.getRuleName());
+        try {
+            ctClass.writeFile(classPath);
+        } catch (CannotCompileException e) {
+            log.info("规则文件编译失败！");
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            log.info("规则文件写出失败！");
+            throw new RuntimeException(e);
+        }
+//        ctClass.defrost();
+        RuleInfo ruleInfo = new RuleInfo();
+        ruleInfo.setId(SnowFlake.getSnowFlakeId());
+        ruleInfo.setRuleName(request.getRuleName());
+        ruleInfo.setTemplateName(request.getTemplateName());
+        ruleInfo.setTemplateMethod(request.getTemplateMethodName());
+        ruleInfo.setRuleContent(content);
+        if (!StringUtils.isEmpty(request.getFieldType())) {
+            ruleInfo.setFieldType(JSON.toJSONString(request.getFieldType()));
+        }
+        if (!StringUtils.isEmpty(request.getParamsType())) {
+            ruleInfo.setParamType(JSON.toJSONString(request.getParamsType()));
+        }
+        if (!StringUtils.isEmpty(request.getConditionIds())) {
+            ruleInfo.setConditionIds(JSON.toJSONString(request.getConditionIds()));
+        }
+        ruleInfo.setReturnType(request.getReturnType());
+        ruleInfoMapper.insertSelective(ruleInfo);
     }
 
-    private void updateFieldType(RuleInfo ruleInfo, ConditionDto info) {
-        if (CollectionUtils.isEmpty(info.getParamsType())) {
-            return;
-        }
-        String paramType = ruleInfo.getParamType();
-        if (StringUtils.isEmpty(paramType)) {
-            ruleInfo.setParamType(JSON.toJSONString(info.getParamsType()));
-        } else {
-            List<String> list = JSON.parseArray(paramType, String.class);
-            info.getParamsType().forEach(a -> {
-                if (!list.contains(a)) {
-                    list.add(a);
+    private CtClass getCtClass(String templateName, String method, String className, String returnType) {
+        CtClass cc = null;
+        try {
+            ClassPool pool = ClassPool.getDefault();
+            CtClass zz = pool.get(templateName);
+            if (zz.isInterface()) {
+                cc = pool.makeClass(templateName + className);
+                CtMethod declaredMethod = null;
+                StringBuilder sb = new StringBuilder();
+                declaredMethod = zz.getDeclaredMethod(method);
+                if (returnType == null) {
+                    returnType = declaredMethod.getReturnType().getName();
                 }
-            });
-            ruleInfo.setFieldType(JSON.toJSONString(info.getParamsType()));
-        }
-    }
-
-    private void updateClassImpl(RuleInfo ruleInfo, ConditionDto info) {
-        RuleClassInfo byTemplateMethod = null;
-        if (byTemplateMethod == null) {
-            RuleClassInfo ruleClassInfo = new RuleClassInfo();
-            ruleClassInfo.setId(SnowFlake.getSnowFlakeId());
-            ruleClassInfo.setClassName(ruleInfo.getTemplateName());
-            ruleClassInfo.setMethodName(ruleInfo.getTemplateMethod());
-            ruleClassInfo.setCodeBody(info.getConditionContent());
-            ruleClassInfo.setMethodParamType(JSON.toJSONString(info.getParamsType()));
-            ruleClassInfo.setFieldType(JSON.toJSONString(info.getFieldType()));
-            ruleClassInfoMapper.insertSelective(ruleClassInfo);
-        } else {
-            String codeBody = byTemplateMethod.getCodeBody();
-            codeBody = codeBody.substring(1, codeBody.length() - 1);
-            String ruleContent = info.getConditionContent();
-            ruleContent = ruleContent.substring(1, ruleContent.length() - 1);
-            codeBody = codeBody + ruleContent;
-            RuleClassInfo ruleClassInfo = new RuleClassInfo();
-            ruleClassInfo.setId(byTemplateMethod.getId());
-            ruleClassInfo.setCodeBody("{" + codeBody + "}");
-            if (!CollectionUtils.isEmpty(info.getFieldType())) {
-                String fieldTypes = byTemplateMethod.getFieldType();
-                if (StringUtils.isEmpty(fieldTypes)) {
-                    ruleClassInfo.setFieldType(JSON.toJSONString(info.getFieldType()));
-                } else {
-                    List<String> strings = JSON.parseArray(fieldTypes, String.class);
-                    strings.addAll(info.getFieldType());
-                    ruleClassInfo.setFieldType(JSON.toJSONString(strings));
-                }
-
-                String paramType = byTemplateMethod.getMethodParamType();
-                if (StringUtils.isEmpty(paramType)) {
-                    ruleClassInfo.setFieldType(JSON.toJSONString(info.getFieldType()));
-                } else {
-                    List<String> strings = JSON.parseArray(paramType, String.class);
-                    strings.addAll(info.getParamsType());
-                    ruleClassInfo.setFieldType(JSON.toJSONString(strings));
-                }
-                ruleClassInfoMapper.updateByPrimaryKeySelective(ruleClassInfo);
+                String initCode = getInitCode(returnType);
+                sb.append("public ").append(returnType).append(" ").append(method).append(
+                        "(){").append(initCode).append("}");
+                CtMethod m = CtNewMethod.make(
+                        sb.toString(), cc);
+                cc.addMethod(m);
+            } else {
+                cc = zz;
             }
+        } catch (Exception e) {
+            log.info("解析规则错误!", e);
+            throw new ResponseException("解析规则错误！");
         }
+        return cc;
+    }
+
+    private String getInitCode(String returnType) {
+        Map<String,String> baseMap = new HashMap<>();
+        baseMap.put("int","int i = 0;return i;");
+        baseMap.put("byte","byte i = 0;return i;");
+        baseMap.put("double","double i = 0;return i;");
+        baseMap.put("long","long i = 0;return i;");
+        baseMap.put("float","float i = 0;return i;");
+        baseMap.put("boolean","boolean i = false;return i;");
+        baseMap.put("char","char i = 0;return i;");
+        baseMap.put("short","short i = 0;return i;");
+        baseMap.put("String","String i = \"\";return i;");
+        baseMap.put("string","String i = \"\";return i;");
+        String initCode = "";
+        if (baseMap.containsKey(returnType)){
+            initCode = baseMap.get(returnType);
+        }else {
+            initCode = returnType+" i = new "+returnType+"();";
+        }
+        return initCode;
+    }
+
+    private List<String> getList(List<String> list) {
+        if (CollectionUtils.isEmpty(list)) {
+            return null;
+        }
+        List<String> listNew = new ArrayList<>();
+        list.forEach(a -> {
+            List<String> jsonList = JSON.parseArray(a, String.class);
+            if (!CollectionUtils.isEmpty(jsonList)) {
+                jsonList.forEach(b -> {
+                    if (!listNew.contains(b)) {
+                        listNew.add(b);
+                    }
+                });
+            }
+        });
+        return listNew;
     }
 }

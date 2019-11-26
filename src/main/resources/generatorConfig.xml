@@ -42,21 +42,16 @@
             <property name="enableSubPackages" value="false" />
         </javaClientGenerator>
         <!-- 指定数据库表 -->
-        <table tableName="t_tenant_employee" enableCountByExample="false" enableUpdateByExample="false"
+
+        <table tableName="rule_info" enableCountByExample="false" enableUpdateByExample="false"
                enableDeleteByExample="false" enableSelectByExample="false"
                selectByExampleQueryId="false">
-<!--            <domainObjectRenamingRule searchString="^T" replaceString="" />-->
+            <columnOverride column="rule_content" jdbcType="VARCHAR" />
         </table>
-<!--        <table tableName="rule_class_info" enableCountByExample="false" enableUpdateByExample="false"-->
-<!--               enableDeleteByExample="false" enableSelectByExample="false"-->
-<!--               selectByExampleQueryId="false">-->
-<!--            <columnOverride column="code_body" jdbcType="VARCHAR" />-->
-<!--            <columnOverride column="method_param_type" jdbcType="VARCHAR" />-->
-<!--        </table>-->
-<!--        <table tableName="condition_info" enableCountByExample="false" enableUpdateByExample="false"-->
-<!--               enableDeleteByExample="false" enableSelectByExample="false"-->
-<!--               selectByExampleQueryId="false">-->
-<!--            <columnOverride column="condition_content" jdbcType="VARCHAR" />-->
-<!--        </table>-->
+        <table tableName="condition_info" enableCountByExample="false" enableUpdateByExample="false"
+               enableDeleteByExample="false" enableSelectByExample="false"
+               selectByExampleQueryId="false">
+            <columnOverride column="condition_content" jdbcType="VARCHAR" />
+        </table>
     </context>
 </generatorConfiguration>
