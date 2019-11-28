@@ -6,6 +6,7 @@ import com.example.rule.entity.dto.RuleDto;
 import com.example.rule.entity.exception.ResponseException;
 import com.example.rule.entity.pojo.ConditionInfo;
 import com.example.rule.entity.pojo.RuleInfo;
+import com.example.rule.entity.vo.RuleResultVO;
 import com.example.rule.mapper.ConditionInfoMapper;
 import com.example.rule.mapper.RuleInfoMapper;
 import com.example.rule.service.RuleService;
@@ -139,9 +140,9 @@ public class RuleServiceImpl implements RuleService {
     }
 
     @Override
-    public Object run(List<RuleDto> list) {
+    public List<RuleResultVO> run(List<RuleDto> list) {
         ExecutorService exec = Executors.newCachedThreadPool();//工头
-        ArrayList<Future<Object>> results = new ArrayList<>();
+        ArrayList<Future<RuleResultVO>> results = new ArrayList<>();
         list.forEach(a -> {
             RuleInfo ruleInfo = ruleInfoMapper.findOneByName(a.getRuleName());
             if (ruleInfo == null) {
@@ -151,10 +152,10 @@ public class RuleServiceImpl implements RuleService {
             results.add(exec.submit(new RuleRun(a)));
         });
         log.info("size1: {}", results.size());
-        List<Object> result = new ArrayList<>();
-        for (Future<Object> future : results) {
+        List<RuleResultVO> result = new ArrayList<>();
+        for (Future<RuleResultVO> future : results) {
             try {
-                Object o = future.get();
+                RuleResultVO o = future.get();
                 result.add(o);
             } catch (Exception e) {
                 log.info("规则执行错误！", e);
@@ -397,6 +398,7 @@ public class RuleServiceImpl implements RuleService {
         baseMap.put("short","short i = 0;return i;");
         baseMap.put("String","String i = \"\";return i;");
         baseMap.put("string","String i = \"\";return i;");
+        baseMap.put("void","");
         String initCode = "";
         if (baseMap.containsKey(returnType)){
             initCode = baseMap.get(returnType);

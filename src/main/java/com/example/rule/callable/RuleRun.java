@@ -2,6 +2,7 @@ package com.example.rule.callable;
 
 import com.alibaba.fastjson.JSON;
 import com.example.rule.entity.dto.RuleDto;
+import com.example.rule.entity.vo.RuleResultVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.CollectionUtils;
 
@@ -17,7 +18,7 @@ import java.util.concurrent.Callable;
  * @Date: 2019/11/22 11:43
  **/
 @Slf4j
-public class RuleRun implements Callable<Object> {
+public class RuleRun implements Callable<RuleResultVO> {
 
     private RuleDto ruleDto;
 
@@ -26,7 +27,9 @@ public class RuleRun implements Callable<Object> {
     }
 
     @Override
-    public Object call() {
+    public RuleResultVO call() {
+        RuleResultVO resultVO = new RuleResultVO();
+        resultVO.setRuleName(ruleDto.getRuleName());
         try {
             Class<?> aClass1 = Class.forName(ruleDto.getRuleName());
             Object o = aClass1.newInstance();
@@ -52,10 +55,15 @@ public class RuleRun implements Callable<Object> {
                     }
                 }
             }
-            return rule;
+            if(rule.getClass().isPrimitive()){
+                resultVO.setRuleResult(rule+"");
+            }else {
+                resultVO.setRuleResult(JSON.toJSONString(rule));
+            }
+            return resultVO;
         } catch (Exception e) {
             log.info("规则执行错误！", e);
-            return false;
+            return resultVO;
         }
     }
 }

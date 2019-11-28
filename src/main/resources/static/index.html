@@ -1,192 +1,245 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <title>规则配置页面-简易版</title>
+    <link rel="stylesheet" href="/layui/css/layui.css" media="all">
+    <style>
+        body {
+            margin: 10px;
+        }
+    </style>
 </head>
-<style>
-    body {
-        background: #353f42;
-    }
-
-    * {
-        padding: 0;
-        margin: 0;
-    }
-
-    .main {
-        margin: 0;
-        padding-left: 25px;
-        padding-right: 25px;
-        padding-top: 15px;
-        width: 350px;
-        height: 1000px;
-        background: #FFFFFF;
-        /*以下css用于让登录表单垂直居中在界面,可删除*/
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        margin-top: -175px;
-        margin-left: -175px;
-    }
-
-    .title {
-        width: 100%;
-        height: 40px;
-        line-height: 40px;
-    }
-
-    .title span {
-        font-size: 18px;
-        color: #353f42;
-    }
-
-    .title-msg {
-        width: 100%;
-        height: 64px;
-        line-height: 64px;
-    }
-
-    .title:hover {
-        cursor: default;
-    }
-
-    .title-msg:hover {
-        cursor: default;
-    }
-
-    .title-msg span {
-        font-size: 12px;
-        color: #707472;
-    }
-
-    .input-content {
-        width: 100%;
-        height: 200px;
-    }
-
-    .input-content input {
-        width: 330px;
-        height: 40px;
-        border: 1px solid #dad9d6;
-        background: #ffffff;
-        padding-left: 10px;
-        padding-right: 10px;
-    }
-
-    .enter-btn {
-        width: 350px;
-        height: 40px;
-        color: #fff;
-        background: #0bc5de;
-        /*line-height: 60px;*/
-        text-align: center;
-        border: 0px;
-    }
-
-    .enter-btn:hover {
-        cursor: pointer;
-        background: #1db5c9;
-    }
-
-</style>
+</head>
 <body>
-<div class="main">
-    <div class="title">
-        <span>规则平台</span>
-    </div>
-
-    <div class="title-msg">
-        <span>添加规则</span>
-    </div>
-
-    <form class="login-form" method="post" id="ruleForm" novalidate>
-        <!--输入框-->
-        <div class="input-content">
-            <!--autoFocus-->
-            <div>
-                <input type="text" autocomplete="off"
-                       placeholder="规则名" name="ruleName" required/>
-            </div>
-
-            <div style="margin-top: 16px">
-                <input type="text"
-                       autocomplete="off" placeholder="模板名" name="templateName" required maxlength="32"/>
-            </div>
-
-            <div style="margin-top: 16px">
-                <input type="text"
-                       autocomplete="off" placeholder="模板方法" name="templateMethodName" required maxlength="32"/>
-            </div>
-        </div>
-
-        <div style="text-align: center">
-            <button type="submit" class="enter-btn" onclick="addRule()">添加规则</button>
-        </div>
-    </form>
-
-    <div class="title-msg">
-        <span>添加条件</span>
-    </div>
-
-    <form class="login-form" method="post" novalidate>
-        <!--输入框-->
-        <div class="input-content">
-            <!--autoFocus-->
-            <div>
-                <input type="file" autocomplete="off"
-                       placeholder="jar包" name="file" required/>
-            </div>
-
-            <div style="margin-top: 16px">
-                <input type="text"
-                       autocomplete="off" placeholder="条件名" name="conditionName" required maxlength="32"/>
-            </div>
-            <div style="margin-top: 16px">
-                <input type="text"
-                       autocomplete="off" placeholder="条件内容" name="conditionContent" required maxlength="32"/>
-            </div>
-            <div style="margin-top: 16px">
-                <input type="text"
-                       autocomplete="off" placeholder="参数类型" name="paramsType" required maxlength="32"/>
-            </div>
-            <div style="margin-top: 16px">
-                <input type="text"
-                       autocomplete="off" placeholder="字段类型" name="fieldType" required maxlength="32"/>
-            </div>
-            <div style="margin-top: 16px">
-                <input type="text"
-                       autocomplete="off" placeholder="规则id" name="ruleId" required maxlength="32"/>
-            </div>
-        </div>
-
-        <div >
-            <button type="submit" class="enter-btn" onclick="addCondition()">添加条件</button>
-        </div>
-    </form>
-
+<div class="layui-card-header">
+    <blockquote class="layui-elem-quote">简单规则配置</blockquote>
 </div>
-</body>
-<script type="text/javascript" src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
-<script type="text/javascript">
-    function addRule() {
-        var data = JSON.stringify($('#ruleForm').serialize());
-        alert(data);
-        $.ajax({
-            //几个参数需要注意一下
-            type: "POST",//方法类型
-            dataType: "json",//预期服务器返回的数据类型 如果是对象返回的是json 如果是字符串这里一定要定义text 之前我就是定义json 结果字符串的返回一直到额error中去
-            url: "http://localhost:8005/rule/addRule",//url
-            data: data,//这个是form表单中的id   jQuery的serialize()方法通过序列化表单值
-            success: function (result) {
-                alert("成功")
-                console.log(result);//打印服务端返回的数据(调试用)
-                if (result.status == 10000) {
-                    alert("SUCCESS");
+
+<fieldset class="layui-elem-field layui-field-title" style="margin-top: 20px;">
+    <legend>添加条件</legend>
+</fieldset>
+
+<div class="layui-form-item">
+    <label class="layui-form-label">条件名称：</label>
+    <div class="layui-input-inline">
+        <input type="text" id="conditionName" name="conditionName" lay-verify="title" autocomplete="off"
+               class="layui-input">
+    </div>
+</div>
+<div class="layui-form-item">
+    <label class="layui-form-label">模板名称：</label>
+    <div class="layui-input-block">
+        <input type="text" id="templateName" name="templateName" lay-verify="title" autocomplete="off"
+               value="com.example.rule.template.RuleTemplate" class="layui-input">
+    </div>
+</div>
+<div class="layui-form-item">
+    <label class="layui-form-label">模板方法：</label>
+    <div class="layui-input-inline">
+        <input type="text" id="templateMethodName" name="templateMethodName" lay-verify="title"
+               autocomplete="off" value="rule" class="layui-input">
+    </div>
+</div>
+<div class="layui-form-item">
+    <label class="layui-form-label">方法参数：</label>
+    <div class="layui-input-block">
+        <input type="text" id="paramsType" name="paramsType" lay-verify="title" autocomplete="off"
+               value="com.example.rule.entity.dto.RuleTest" class="layui-input">
+    </div>
+</div>
+<div class="layui-form-item"> <!--一个表单模块-->
+    <label class="layui-form-label">判断内容：</label>
+    <div class="layui-input-block">
+        <input type="text" id="judgeContent" name="judgeContent" lay-verify="title"
+               autocomplete="off" class="layui-input">
+    </div>
+</div>
+<div class="layui-form-item"> <!--一个表单模块-->
+    <label class="layui-form-label">前置内容：</label>
+    <div class="layui-input-block">
+        <input type="text" id="preContent" name="preContent" lay-verify="title"
+               autocomplete="off" class="layui-input">
+    </div>
+</div>
+
+<div class="layui-form-item layui-form layui-inline"> <!--一个表单模块-->
+    <label class="layui-form-label">依赖jar包：</label>
+    <div class="layui-input-inline">
+        <input type="file" id="file" name="file" lay-verify="title"
+               autocomplete="off" class="layui-input">
+    </div>
+</div>
+
+<div id="conditionBtn" class="layui-form-item" style="margin-left: 3.125rem;">
+    <button class="layui-btn" onclick="condition();">条件提交</button>
+</div>
+
+<fieldset class="layui-elem-field layui-field-title" style="margin-top: 20px;">
+    <legend>添加规则</legend>
+</fieldset>
+
+<div class="layui-form-item"> <!--一个表单模块-->
+    <label class="layui-form-label">模板名称：</label>
+    <div class="layui-input-block">
+        <input type="text" id="templateName2" name="templateName2" lay-verify="title"
+               autocomplete="off"
+               value="com.example.rule.template.RuleTemplate" class="layui-input">
+    </div>
+</div>
+<div class="layui-form-item"> <!--一个表单模块-->
+    <label class="layui-form-label">规则名称：</label>
+    <div class="layui-input-inline">
+        <input type="text" id="ruleName" name="ruleName" lay-verify="title"
+               autocomplete="off" class="layui-input">
+    </div>
+</div>
+<div class="layui-form-item"> <!--一个表单模块-->
+    <label class="layui-form-label">模板方法：</label>
+    <div class="layui-input-inline">
+        <input type="text" id="templateMethodName2" name="templateMethodName2" lay-verify="title"
+               autocomplete="off" value="rule" class="layui-input">
+    </div>
+</div>
+
+<div class="layui-form-item "> <!--一个表单模块-->
+    <label class="layui-form-label">组合条件：</label>
+    <div class="layui-input-inline">
+        <input type="text" id="conditionIds" name="conditionIds" lay-verify="title"
+               autocomplete="off" class="layui-input">
+    </div>
+</div>
+<div class="layui-form-item ">
+    <label class="layui-form-label">返回类型：</label>
+    <div class="layui-input-inline">
+        <input type="text" id="returnType" name="returnType" lay-verify="title"
+               autocomplete="off" class="layui-input">
+    </div>
+</div>
+<div class="layui-form-item ">
+    <label class="layui-form-label">命中条件数：</label>
+    <div class="layui-input-inline">
+        <input type="text" id="hitCount" name="hitCount" lay-verify="title"
+               autocomplete="off" class="layui-input">
+    </div>
+</div>
+<div class="layui-form-item ">
+    <label class="layui-form-label">命中后操作内容：</label>
+    <div class="layui-input-block">
+        <input type="text" id="hitContent" name="hitContent" lay-verify="title"
+               autocomplete="off" class="layui-input">
+    </div>
+</div>
+
+<div id="layerBtn" class="layui-form-item" style="margin-left: 3.125rem;">
+    <button class="layui-btn" onclick="addRule();">规则提交</button>
+</div>
+
+
+<fieldset class="layui-elem-field layui-field-title" style="margin-top: 20px;">
+    <legend>执行规则</legend>
+</fieldset>
+<div class="layui-form-item"> <!--一个表单模块-->
+    <label class="layui-form-label">规则方法：</label>
+    <div class="layui-input-inline">
+        <input type="text" id="templateMethodName3" name="templateMethodName3" lay-verify="title"
+               autocomplete="off" class="layui-input">
+    </div>
+</div>
+<div class="layui-form-item"> <!--一个表单模块-->
+    <label class="layui-form-label">规则名称：</label>
+    <div class="layui-input-inline">
+        <input type="text" id="ruleName2" name="ruleName2" lay-verify="title"
+               autocomplete="off" class="layui-input">
+    </div>
+</div>
+<div class="layui-form-item"> <!--一个表单模块-->
+    <label class="layui-form-label">规则参数：</label>
+    <div class="layui-input-inline">
+        <input type="text" id="params" name="params" lay-verify="title"
+               autocomplete="off" class="layui-input">
+    </div>
+</div>
+<div id="ruleRun" class="layui-form-item" style="margin-left: 3.125rem;">
+    <button class="layui-btn" onclick="ruleRun();">规则执行</button>
+</div>
+
+<!--js部分-->
+<script src="/layui/layui.js"></script>
+<script>
+    function condition() {
+        layui.use(['jquery', 'layer'], function () {
+            var $ = layui.jquery;
+            var layer = layui.layer;
+            var formData = new FormData();
+            var file = document.getElementById("file").files[0];
+            formData.append("file", file);
+            var conditionName = $("#conditionName").val();
+            var info = JSON.stringify({
+                "conditionName": conditionName,
+                "paramsType": $("#paramsType").val().split(","),
+                "templateName": $("#templateName").val(),
+                "templateMethodName": $("#templateMethodName").val(),
+                "judgeContent": $("#judgeContent").val(),
+                "preContent": $("#preContent").val()
+            });
+            //这里包装 可以直接转换成对象
+            formData.append('json', new Blob([info], {type: "application/json"}));
+            $.ajax({
+                url: "/rule/addCondition",
+                type: "POST",
+                dataType: "json",
+                data: formData,
+                processData: false,//用于对data参数进行序列化处理 这里必须false
+                contentType: false, //必须
+                success: function (data) {
+                    if (data.status == 10000) {
+                        layer.msg("条件添加成功！");
+                    } else {
+                        layer.msg("条件添加失败！" + data.data);
+                    }
+                },
+                error: function () {
+                    layer.msg("条件添加失败！");
                 }
-                ;
-            }
+            });
+        });
+    }
+
+    function addRule() {
+        layui.use(['jquery', 'layer'], function () {
+            var $ = layui.jquery;
+            var layer = layui.layer;
+
+            //这里包装 可以直接转换成对象
+            $.ajax({
+                url: "/rule/addRule",
+                type: "POST",
+                data: JSON.stringify({
+                    "ruleName": $("#ruleName").val(),
+                    "templateName": $("#templateName2").val(),
+                    "templateMethodName": $("#templateMethodName2").val(),
+                    "conditionIds": $("#conditionIds").val().split(","),
+                    "returnType": $("#returnType").val(),
+                    "hitCount": $("#hitCount").val(),
+                    "hitContent": $("#hitContent").val()
+                }),
+                contentType: "application/json;charset=utf-8", //必须
+                success: function (data) {
+                    if (data.status == 10000) {
+                        layer.msg("条件添加成功！");
+                    } else {
+                        layer.msg("条件添加失败！" + data.data);
+                    }
+                },
+                error: function () {
+                    layer.msg("条件添加失败！");
+                }
+            });
         });
     }
 </script>
+</body>
 </html>

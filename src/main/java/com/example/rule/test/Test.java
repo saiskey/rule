@@ -20,6 +20,9 @@ public class Test {
 
 
     public static void main(String[] args) throws Exception {
+        boolean a = false;
+        String b = a+"";
+        System.out.println(b);
         ClassPool pool = ClassPool.getDefault();
         CtClass zz = pool.get("com.example.rule.template.RuleTemplate");
         CtClass cc = null;

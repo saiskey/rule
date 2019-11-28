@@ -1,6 +1,7 @@
 package com.example.rule.service;
 
 import com.example.rule.entity.dto.RuleDto;
+import com.example.rule.entity.vo.RuleResultVO;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -16,5 +17,5 @@ public interface RuleService {
 
     void addCondition(RuleDto info, MultipartFile file);
 
-    Object run(List<RuleDto> request);
+    List<RuleResultVO> run(List<RuleDto> request);
 }

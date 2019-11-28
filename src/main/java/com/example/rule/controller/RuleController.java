@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.example.rule.entity.dto.RuleDto;
 import com.example.rule.entity.dto.RuleTest;
 import com.example.rule.entity.vo.ResponseVo;
+import com.example.rule.entity.vo.RuleResultVO;
 import com.example.rule.service.RuleService;
 import com.example.rule.utils.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -50,7 +51,7 @@ public class RuleController {
 
     @PostMapping("/run")
     public ResponseVo run(@RequestBody List<RuleDto> request) {
-        Object run = ruleService.run(request);
+        List<RuleResultVO> run = ruleService.run(request);
         return ResponseVo.success(run);
     }
 
