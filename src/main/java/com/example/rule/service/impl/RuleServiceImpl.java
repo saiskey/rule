@@ -23,10 +23,8 @@ import javassist.CtNewMethod;
 import javassist.NotFoundException;
 import javassist.bytecode.AnnotationsAttribute;
 import javassist.bytecode.ClassFile;
-import javassist.bytecode.CodeAttribute;
 import javassist.bytecode.ConstPool;
 import javassist.bytecode.FieldInfo;
-import javassist.bytecode.LineNumberAttribute;
 import javassist.bytecode.annotation.Annotation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -225,12 +223,12 @@ public class RuleServiceImpl implements RuleService {
 //                                (LineNumberAttribute) codeAttribute.getAttribute(LineNumberAttribute.tag);
 //                        int i = lineNumberAttribute.tableLength();
 //                        log.info("tableLength:{}", i);
-                        String code = ctMethod.getName()+"{";
+                        String code = ctMethod.getName() + "{";
 
 //                        int lineNumber = ctMethod.getMethodInfo().getLineNumber(0);
 //                        log.info("lineNumber:{}", lineNumber);
 //                        ctMethod.insertAt(6, "{" + ruleBody + "}");
-                        ctMethod.insertAfter( "{" + ruleBody + "}");
+                        ctMethod.insertAfter("{" + ruleBody + "}");
                     }
                 }
             } catch (Exception e) {
@@ -355,6 +353,48 @@ public class RuleServiceImpl implements RuleService {
         }
         ruleInfo.setReturnType(request.getReturnType());
         ruleInfoMapper.insertSelective(ruleInfo);
+
+        //生成drl文件
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("package ").append(request.getRuleName()).append("\n");
+
+        fieldList.forEach(a -> {
+            //导入部分拼接
+            stringBuilder.append("import ").append(a).append(";\n");
+        });
+
+        paramList.forEach(a -> {
+            stringBuilder.append("import ").append(a).append(";\n");
+        });
+        stringBuilder.append("global Integer hitCount;\n");
+        judgeMap.forEach((a, b) -> {
+            stringBuilder.append("rule \"").append(a).append("\"\n");
+            String[] split = b.split("\\.");
+            char[] cs = split[0].toCharArray();
+            cs[0] -= 32;
+            String className = String.valueOf(cs);
+            char[] chars = split[1].substring(3).toCharArray();
+            chars[0] += 32;
+            String field = String.valueOf(chars);
+            stringBuilder.append("when \n").append("$").append(className).append(" : ").append(className).append("(").append(field).append(
+                    ")\n");
+            stringBuilder.append("then hitCount++;\nend\n");
+
+        });
+        stringBuilder.append("rule \"hitResult\"\nwhen\n hitCount >=").append(request.getHitCount()).append("\nthen " +
+                "\n").append(request.getHitContent()).append("\nend\n");
+        try {
+            File file = new File(classPath, "test.drl");
+            if (!file.exists()) {
+                file.createNewFile();
+            }
+            FileOutputStream outputStream = new FileOutputStream(file);
+            outputStream.write(stringBuilder.toString().getBytes());
+            outputStream.flush();
+            outputStream.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private CtClass getCtClass(String templateName, String method, String className, String returnType) {
@@ -387,23 +427,23 @@ public class RuleServiceImpl implements RuleService {
     }
 
     private String getInitCode(String returnType) {
-        Map<String,String> baseMap = new HashMap<>();
-        baseMap.put("int","int i = 0;return i;");
-        baseMap.put("byte","byte i = 0;return i;");
-        baseMap.put("double","double i = 0;return i;");
-        baseMap.put("long","long i = 0;return i;");
-        baseMap.put("float","float i = 0;return i;");
-        baseMap.put("boolean","boolean i = false;return i;");
-        baseMap.put("char","char i = 0;return i;");
-        baseMap.put("short","short i = 0;return i;");
-        baseMap.put("String","String i = \"\";return i;");
-        baseMap.put("string","String i = \"\";return i;");
-        baseMap.put("void","");
+        Map<String, String> baseMap = new HashMap<>();
+        baseMap.put("int", "int i = 0;return i;");
+        baseMap.put("byte", "byte i = 0;return i;");
+        baseMap.put("double", "double i = 0;return i;");
+        baseMap.put("long", "long i = 0;return i;");
+        baseMap.put("float", "float i = 0;return i;");
+        baseMap.put("boolean", "boolean i = false;return i;");
+        baseMap.put("char", "char i = 0;return i;");
+        baseMap.put("short", "short i = 0;return i;");
+        baseMap.put("String", "String i = \"\";return i;");
+        baseMap.put("string", "String i = \"\";return i;");
+        baseMap.put("void", "");
         String initCode = "";
-        if (baseMap.containsKey(returnType)){
+        if (baseMap.containsKey(returnType)) {
             initCode = baseMap.get(returnType);
-        }else {
-            initCode = returnType+" i = new "+returnType+"();";
+        } else {
+            initCode = returnType + " i = new " + returnType + "();";
         }
         return initCode;
     }
