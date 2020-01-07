@@ -2,6 +2,7 @@ package com.example.rule.test;
 
 import javassist.ClassPool;
 import javassist.CtClass;
+import javassist.CtField;
 import javassist.CtMethod;
 import javassist.CtNewMethod;
 
@@ -27,6 +28,8 @@ public class Test {
         CtClass cc = null;
         //创建类
         cc = pool.makeClass("TestRule2");
+        CtField nameField = CtField.make("private String name = \"test1\";",cc);
+        cc.addField(nameField);
         //获取一个类的指定方法无参（有参需要传参数类型 CtClass[]）
         CtMethod declaredMethod  = zz.getDeclaredMethod("rule");
         String returnType = "String";
