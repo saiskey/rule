@@ -18,4 +18,7 @@ public interface RuleService {
     void addCondition(RuleDto info, MultipartFile file);
 
     List<RuleResultVO> run(List<RuleDto> request);
+
+    List<RuleDto> findCondition();
+
 }

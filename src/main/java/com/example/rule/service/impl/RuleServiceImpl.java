@@ -25,6 +25,7 @@ import javassist.bytecode.AnnotationsAttribute;
 import javassist.bytecode.ClassFile;
 import javassist.bytecode.ConstPool;
 import javassist.bytecode.FieldInfo;
+import javassist.bytecode.MethodInfo;
 import javassist.bytecode.annotation.Annotation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -139,7 +140,7 @@ public class RuleServiceImpl implements RuleService {
 
     @Override
     public List<RuleResultVO> run(List<RuleDto> list) {
-        ExecutorService exec = Executors.newCachedThreadPool();//工头
+        ExecutorService exec = Executors.newCachedThreadPool();
         ArrayList<Future<RuleResultVO>> results = new ArrayList<>();
         list.forEach(a -> {
             RuleInfo ruleInfo = ruleInfoMapper.findOneByName(a.getRuleName());
@@ -163,24 +164,32 @@ public class RuleServiceImpl implements RuleService {
         return result;
     }
 
+    @Override
+    public List<RuleDto> findCondition() {
+        List<RuleDto> list = conditionInfoMapper.findAll();
+        return list;
+    }
+
     private void addField(CtClass cc, List<String> fieldType) {
         if (!CollectionUtils.isEmpty(fieldType)) {
             fieldType.forEach(a -> {
-                try {
-                    //添加到spring中
-                    LoadJarUtil.addToSpring(a);
-                    String shortClassName = getShortClassName(a);
+                if (!StringUtils.isEmpty(a)) {
                     try {
-                        CtField field = cc.getField(shortClassName);
-                        if (field == null) {
-                            //添加字段并初始化
+                        //添加到spring中
+                        LoadJarUtil.addToSpring(a);
+                        String shortClassName = getShortClassName(a);
+                        try {
+                            CtField field = cc.getField(shortClassName);
+                            if (field == null) {
+                                //添加字段并初始化
+                                addFieldAndInit(a, cc);
+                            }
+                        } catch (NotFoundException exception) {
                             addFieldAndInit(a, cc);
                         }
-                    } catch (NotFoundException exception) {
-                        addFieldAndInit(a, cc);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
                     }
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
                 }
             });
         }
@@ -192,11 +201,23 @@ public class RuleServiceImpl implements RuleService {
         for (CtMethod ctMethod : methods) {
             try {
                 if (ctMethod.getName().equals(info.getTemplateMethodName())) {
+                    Object[] annotations = ctMethod.getAnnotations();
+                    ConstPool constPool = target.getClassFile().getConstPool();
+                    AnnotationsAttribute methodAttr = new AnnotationsAttribute(constPool, AnnotationsAttribute.visibleTag);
+                    for (Object o :annotations) {
+                        log.info("annotation name :{}",o.getClass().getTypeName());
+                        Annotation annotation = new Annotation(o.getClass().getTypeName(), constPool);
+                        methodAttr.addAnnotation(annotation);
+                    }
+
                     List<String> paramsType = info.getParamsType();
                     if (CollectionUtils.isEmpty(paramsType)) {
                         ctMethod.insertAfter(ruleBody);
                     } else {
                         for (String a : paramsType) {
+                            if (StringUtils.isEmpty(a)) {
+                                break;
+                            }
                             CtClass[] parameterTypes = ctMethod.getParameterTypes();
                             boolean flag = false;
                             int order = 0;
@@ -224,10 +245,11 @@ public class RuleServiceImpl implements RuleService {
 //                        int i = lineNumberAttribute.tableLength();
 //                        log.info("tableLength:{}", i);
                         String code = ctMethod.getName() + "{";
-
 //                        int lineNumber = ctMethod.getMethodInfo().getLineNumber(0);
 //                        log.info("lineNumber:{}", lineNumber);
 //                        ctMethod.insertAt(6, "{" + ruleBody + "}");
+                        MethodInfo methodInfo = ctMethod.getMethodInfo();
+                        methodInfo.addAttribute(methodAttr);
                         ctMethod.insertAfter("{" + ruleBody + "}");
                     }
                 }

@@ -44,6 +44,13 @@
     </div>
 </div>
 <div class="layui-form-item">
+    <label class="layui-form-label">添加模板字段类型：</label>
+    <div class="layui-input-inline">
+        <input type="text" id="fieldType" name="fieldType" lay-verify="title"
+               autocomplete="off" value="" class="layui-input">
+    </div>
+</div>
+<div class="layui-form-item">
     <label class="layui-form-label">方法参数：</label>
     <div class="layui-input-block">
         <input type="text" id="paramsType" name="paramsType" lay-verify="title" autocomplete="off"
@@ -106,11 +113,12 @@
 
 <div class="layui-form-item "> <!--一个表单模块-->
     <label class="layui-form-label">组合条件：</label>
-    <div class="layui-input-inline">
-        <input type="text" id="conditionIds" name="conditionIds" lay-verify="title"
-               autocomplete="off" class="layui-input">
+    <div class="layui-input-block">
+        <div id="conditionSelect" class="xm-select-demo"></div>
     </div>
 </div>
+
+
 <div class="layui-form-item ">
     <label class="layui-form-label">返回类型：</label>
     <div class="layui-input-inline">
@@ -141,6 +149,7 @@
 <fieldset class="layui-elem-field layui-field-title" style="margin-top: 20px;">
     <legend>执行规则</legend>
 </fieldset>
+
 <div class="layui-form-item"> <!--一个表单模块-->
     <label class="layui-form-label">规则方法：</label>
     <div class="layui-input-inline">
@@ -155,20 +164,71 @@
                autocomplete="off" class="layui-input">
     </div>
 </div>
-<div class="layui-form-item"> <!--一个表单模块-->
-    <label class="layui-form-label">规则参数：</label>
-    <div class="layui-input-inline">
-        <input type="text" id="params" name="params" lay-verify="title"
-               autocomplete="off" class="layui-input">
+<div id="runParams">
+    <div class="layui-form-item"> <!--一个表单模块-->
+        <label class="layui-form-label">执行规则参数类型：</label>
+        <div class="layui-input-inline">
+            <input type="text" id="runParamsType1" name="runParamsType1" lay-verify="title"
+                   autocomplete="off" class="layui-input">
+        </div>
+        <label class="layui-form-label">执行规则参数值：</label>
+        <div class="layui-input-inline">
+            <input type="text" id="runParamsValue1" name="runParamsValue1" lay-verify="title"
+                   autocomplete="off" class="layui-input">
+        </div>
+    </div>
+</div>
+
+<div class="layui-form-item">
+    <div class="layui-inline">
+        <label class="layui-form-label"></label>
+        <div class="layui-inline">
+            <input type='button' class="layui-btn layui-btn-sm layui-btn-primary" id="add" value="+ 添加执行规则参数"
+                   onclick="addInput();"/>
+        </div>
     </div>
 </div>
 <div id="ruleRun" class="layui-form-item" style="margin-left: 3.125rem;">
     <button class="layui-btn" onclick="ruleRun();">规则执行</button>
 </div>
 
+
 <!--js部分-->
 <script src="/layui/layui.js"></script>
+<script src="/select.js"></script>
 <script>
+    var lastSize = 1;
+    layui.use(['jquery', 'layer'], function () {
+        var $ = layui.jquery;
+        $.ajax({
+            url: "/rule/findCondition",
+            type: "POST",
+            data: {},
+            contentType: "application/json;charset=utf-8", //必须
+            success: function (data) {
+                if (data.status == 10000) {
+                    var list = data.data;
+                    var conditionList = new Array();
+                    for (i = 0; i < list.length; i++) {
+                        var condition = new Object();
+                        condition.value = list[i].conditionId;
+                        condition.name = list[i].conditionName;
+                        conditionList.push(condition);
+                    }
+                    xmSelect.render({
+                        el: '#conditionSelect',
+                        data: conditionList
+                    })
+                } else {
+                    layer.msg("查询条件失败！" + data.data);
+                }
+            },
+            error: function () {
+                layer.msg("查询条件失败！");
+            }
+        });
+    });
+
     function condition() {
         layui.use(['jquery', 'layer'], function () {
             var $ = layui.jquery;
@@ -180,6 +240,7 @@
             var info = JSON.stringify({
                 "conditionName": conditionName,
                 "paramsType": $("#paramsType").val().split(","),
+                "fieldType": $("#fieldType").val().split(","),
                 "templateName": $("#templateName").val(),
                 "templateMethodName": $("#templateMethodName").val(),
                 "judgeContent": $("#judgeContent").val(),
@@ -212,8 +273,8 @@
         layui.use(['jquery', 'layer'], function () {
             var $ = layui.jquery;
             var layer = layui.layer;
-
             //这里包装 可以直接转换成对象
+            var conditionSelect = xmSelect.get("#conditionSelect", true);
             $.ajax({
                 url: "/rule/addRule",
                 type: "POST",
@@ -221,7 +282,7 @@
                     "ruleName": $("#ruleName").val(),
                     "templateName": $("#templateName2").val(),
                     "templateMethodName": $("#templateMethodName2").val(),
-                    "conditionIds": $("#conditionIds").val().split(","),
+                    "conditionIds": conditionSelect.getValue("valueStr"),
                     "returnType": $("#returnType").val(),
                     "hitCount": $("#hitCount").val(),
                     "hitContent": $("#hitContent").val()
@@ -229,15 +290,69 @@
                 contentType: "application/json;charset=utf-8", //必须
                 success: function (data) {
                     if (data.status == 10000) {
-                        layer.msg("条件添加成功！");
+                        layer.msg("规则添加成功！");
                     } else {
-                        layer.msg("条件添加失败！" + data.data);
+                        layer.msg("规则添加失败！" + data.data);
                     }
                 },
                 error: function () {
-                    layer.msg("条件添加失败！");
+                    layer.msg("规则添加失败！");
                 }
             });
+        });
+    }
+
+    function ruleRun() {
+        layui.use(['jquery', 'layer'], function () {
+            var $ = layui.jquery;
+            var layer = layui.layer;
+            var params = new Map();
+            for (i = 1; i <= lastSize; i++) {
+                var key = $("#runParamsType" + i).val();
+                if (key != null && key != "") {
+                    params.set(key, $("#runParamsValue" + i).val());
+                }
+            }
+            //这里包装 可以直接转换成对象
+            $.ajax({
+                url: "/rule/run",
+                type: "POST",
+                data: JSON.stringify([{
+                    "ruleName": $("#ruleName2").val(),
+                    "templateMethodName": $("#templateMethodName3").val(),
+                    "params": params
+                }]),
+                contentType: "application/json;charset=utf-8", //必须
+                success: function (data) {
+                    if (data.status == 10000) {
+                        layer.alert("规则执行成功！\r执行结果：" + JSON.stringify(data.data[0]));
+                    } else {
+                        layer.msg("规则执行失败！" + data.data);
+                    }
+                },
+                error: function () {
+                    layer.msg("规则执行失败！");
+                }
+            });
+        });
+    }
+
+    function addInput() {
+        layui.use(['jquery', 'layer'], function () {
+            var $ = layui.jquery;
+            var index = lastSize + 1;
+            var html = "<div class=\"layui-form-item\"><label class=\"layui-form-label\">执行规则参数类型" + index + "：</label>\n" +
+                "    <div class=\"layui-input-inline\">\n" +
+                "        <input type=\"text\" id=\"runParamsType" + index + "\" name=\"runParamsType" + index + "\" lay-verify=\"title\"\n" +
+                "               autocomplete=\"off\" class=\"layui-input\">\n" +
+                "    </div>\n" +
+                "    <label class=\"layui-form-label\">执行规则参数值" + index + "：</label>\n" +
+                "    <div class=\"layui-input-inline\">\n" +
+                "        <input type=\"text\" id=\"runParamsValue" + index + "\" name=\"runParamsValue" + index + "\" lay-verify=\"title\"\n" +
+                "               autocomplete=\"off\" class=\"layui-input\">\n" +
+                "    </div></div>";
+            $("#runParams").append(html);
+            lastSize++;
         });
     }
 </script>

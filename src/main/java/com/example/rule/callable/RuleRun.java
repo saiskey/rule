@@ -55,14 +55,17 @@ public class RuleRun implements Callable<RuleResultVO> {
                     }
                 }
             }
-            if(rule.getClass().isPrimitive()){
-                resultVO.setRuleResult(rule+"");
-            }else {
+            if (rule == null) {
+                resultVO.setRuleResult(null);
+            } else if (rule.getClass().isPrimitive()) {
+                resultVO.setRuleResult(rule + "");
+            } else {
                 resultVO.setRuleResult(JSON.toJSONString(rule));
             }
             return resultVO;
         } catch (Exception e) {
             log.info("规则执行错误！", e);
+            resultVO.setRuleResult("规则不通过！");
             return resultVO;
         }
     }

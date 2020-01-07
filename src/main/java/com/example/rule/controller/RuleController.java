@@ -49,6 +49,12 @@ public class RuleController {
         return ResponseVo.success();
     }
 
+    @PostMapping(value = "/findCondition")
+    public ResponseVo findCondition() {
+        List<RuleDto> list = ruleService.findCondition();
+        return ResponseVo.success(list);
+    }
+
     @PostMapping("/run")
     public ResponseVo run(@RequestBody List<RuleDto> request) {
         List<RuleResultVO> run = ruleService.run(request);
@@ -65,7 +71,9 @@ public class RuleController {
             count++;
             redisUtil.set("loginCount", count.toString());
         }
-        redisUtil.set(ruleTest.getKey(), JSON.toJSON(ruleTest));
+        redisUtil.set(ruleTest.getKey(), JSON.toJSONString(ruleTest));
+//        String value = (String) redisUtil.get(ruleTest.getKey());
+//        RuleTest param1 = JSON.parseObject(value, RuleTest.class);
 
     }
 

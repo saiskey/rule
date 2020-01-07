@@ -42,9 +42,9 @@ public class LoadJarUtil {
     }
 
     public static void initToSpring(String name) {
-        if (SpringUtil.exist(name)) {
-            return;
-        }
+//        if (SpringUtil.exist(name)) {
+//            return;
+//        }
         Class<?> clazz = null;
         try {
             clazz = Class.forName(name);
@@ -59,8 +59,11 @@ public class LoadJarUtil {
                 continue;
             }
             if (field.isAnnotationPresent(SpringGet.class)) {
+                Class<?> type = field.getType();
+                if (SpringUtil.exist(type.getName())) {
+                    return;
+                }
                 try {
-                    Class<?> type = field.getType();
                     Field[] declaredFields = type.getDeclaredFields();
                     o = type.newInstance();
                     field.setAccessible(true);
@@ -72,8 +75,8 @@ public class LoadJarUtil {
                             f.setAccessible(false);
                         }
                     }
-                    log.info("手动添加spring bean:{}", type.getName());
                     SpringUtil.getBeanFactory().registerSingleton(type.getName(), o);
+                    log.info("手动添加spring bean:{}", type.getName());
                 } catch (Exception e) {
                     log.info("手动添加spring bean失败！", e);
                 }
